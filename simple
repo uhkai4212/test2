@@ -1,5 +1,6 @@
 -- ShadowUI Library
--- A compact UI library for Roblox exploits with window, buttons, toggles, sliders, and inputs
+-- A compact, mobile-friendly UI library for Roblox exploits
+-- Features: Window, Buttons, Toggles, Sliders, and Inputs
 
 local ShadowUI = {}
 local TweenService = game:GetService("TweenService")
@@ -23,7 +24,7 @@ ShadowUI.Config = {
     },
     Animation = {
         Duration = 0.2,
-        EasingStyle = Enum.EasingStyle.Quint
+        EasingStyle = Enum.EasingStyle.Quad
     }
 }
 
@@ -39,6 +40,8 @@ if syn and syn.protect_gui then
     ScreenGui.Parent = game:GetService("CoreGui")
 elseif gethui then
     ScreenGui.Parent = gethui()
+elseif KRNL_LOADED and request then
+    ScreenGui.Parent = game.CoreGui
 else
     ScreenGui.Parent = game.CoreGui:FindFirstChild("RobloxGui") or LocalPlayer:WaitForChild("PlayerGui")
 end
@@ -86,34 +89,17 @@ local function Tween(obj, props, duration)
     return tween
 end
 
-local function Ripple(parent, x, y)
-    local ripple = Instance.new("Frame")
-    ripple.Name = "Ripple"
-    ripple.Parent = parent
-    ripple.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    ripple.BackgroundTransparency = 0.7
-    ripple.BorderSizePixel = 0
-    ripple.Position = UDim2.new(0, x - parent.AbsolutePosition.X, 0, y - parent.AbsolutePosition.Y)
-    ripple.Size = UDim2.new(0, 0, 0, 0)
-    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
-    ripple.ZIndex = parent.ZIndex + 1
-    
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(1, 0)
-    corner.Parent = ripple
-    
-    local maxSize = math.max(parent.AbsoluteSize.X, parent.AbsoluteSize.Y) * 2
-    Tween(ripple, {Size = UDim2.new(0, maxSize, 0, maxSize), BackgroundTransparency = 1}, 0.5)
-    
-    game:GetService("Debris"):AddItem(ripple, 0.5)
-end
-
 local function MakeDraggable(frame)
     local dragging = false
     local dragStart, startPos
     
+    local function UpdateDrag(input)
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+    
     frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = frame.Position
@@ -127,9 +113,8 @@ local function MakeDraggable(frame)
     end)
     
     frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement and dragging then
-            local delta = input.Position - dragStart
-            frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
+            UpdateDrag(input)
         end
     end)
 end
@@ -137,7 +122,7 @@ end
 -- Window Creator
 function ShadowUI:CreateWindow(title, size)
     local window = {}
-    size = size or UDim2.new(0, 450, 0, 350)
+    size = size or UDim2.new(0, 500, 0, 300) -- Wider than tall
     
     -- Create main frame
     local frame = Instance.new("Frame")
@@ -156,10 +141,11 @@ function ShadowUI:CreateWindow(title, size)
     
     CreateShadow(frame)
     
-    -- Create title bar
+    -- Create title bar (positioned slightly higher)
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 30)
+    titleBar.Size = UDim2.new(1, 0, 0, 35)
+    titleBar.Position = UDim2.new(0, 0, 0, -5)
     titleBar.BackgroundColor3 = ShadowUI.Config.Theme.Background
     titleBar.BorderSizePixel = 0
     titleBar.ZIndex = 11
@@ -177,7 +163,7 @@ function ShadowUI:CreateWindow(title, size)
     local titleText = Instance.new("TextLabel")
     titleText.Name = "Title"
     titleText.Size = UDim2.new(1, -40, 1, 0)
-    titleText.Position = UDim2.new(0, 10, 0, 0)
+    titleText.Position = UDim2.new(0, 10, 0, 5)
     titleText.BackgroundTransparency = 1
     titleText.Font = Enum.Font.GothamBold
     titleText.Text = title or "ShadowUI"
@@ -191,7 +177,7 @@ function ShadowUI:CreateWindow(title, size)
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "Close"
     closeButton.Size = UDim2.new(0, 24, 0, 24)
-    closeButton.Position = UDim2.new(1, -27, 0, 3)
+    closeButton.Position = UDim2.new(1, -27, 0, 5)
     closeButton.BackgroundColor3 = ShadowUI.Config.Theme.Error
     closeButton.BackgroundTransparency = 0.8
     closeButton.BorderSizePixel = 0
@@ -215,7 +201,6 @@ function ShadowUI:CreateWindow(title, size)
     end)
     
     closeButton.MouseButton1Click:Connect(function()
-        Ripple(closeButton, Mouse.X, Mouse.Y)
         Tween(frame, {Size = UDim2.new(0, frame.Size.X.Offset, 0, 0)}, 0.3)
         wait(0.3)
         frame:Destroy()
@@ -224,8 +209,8 @@ function ShadowUI:CreateWindow(title, size)
     -- Create content container
     local container = Instance.new("ScrollingFrame")
     container.Name = "Container"
-    container.Size = UDim2.new(1, -20, 1, -35)
-    container.Position = UDim2.new(0, 10, 0, 25)
+    container.Size = UDim2.new(1, -20, 1, -40)
+    container.Position = UDim2.new(0, 10, 0, 30)
     container.BackgroundTransparency = 1
     container.BorderSizePixel = 0
     container.ScrollBarThickness = 4
@@ -249,7 +234,7 @@ function ShadowUI:CreateWindow(title, size)
         
         local buttonFrame = Instance.new("Frame")
         buttonFrame.Name = "Button_" .. text
-        buttonFrame.Size = UDim2.new(1, 0, 0, 35)
+        buttonFrame.Size = UDim2.new(1, 0, 0, 40) -- Slightly taller for mobile touch
         buttonFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
         buttonFrame.BorderSizePixel = 0
         buttonFrame.ZIndex = 12
@@ -260,7 +245,7 @@ function ShadowUI:CreateWindow(title, size)
         buttonCorner.Parent = buttonFrame
         
         local buttonLabel = Instance.new("TextLabel")
-        buttonLabel.Size = UDim2.new(1, -10, 1, 0)
+        buttonLabel.Size = UDim2.new(1, -20, 1, 0)
         buttonLabel.Position = UDim2.new(0, 10, 0, 0)
         buttonLabel.BackgroundTransparency = 1
         buttonLabel.Font = Enum.Font.GothamMedium
@@ -289,7 +274,6 @@ function ShadowUI:CreateWindow(title, size)
         end)
         
         buttonClick.MouseButton1Click:Connect(function()
-            Ripple(buttonFrame, Mouse.X, Mouse.Y)
             Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.Accent, BackgroundTransparency = 0.7})
             wait(0.15)
             Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover, BackgroundTransparency = 0})
@@ -303,14 +287,14 @@ function ShadowUI:CreateWindow(title, size)
         }
     end
     
-    -- Toggle Creator
+    -- Toggle Creator with new animation
     function window:CreateToggle(text, default, callback)
         callback = callback or function() end
         local enabled = default or false
         
         local toggleFrame = Instance.new("Frame")
         toggleFrame.Name = "Toggle_" .. text
-        toggleFrame.Size = UDim2.new(1, 0, 0, 35)
+        toggleFrame.Size = UDim2.new(1, 0, 0, 40) -- Taller for mobile
         toggleFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
         toggleFrame.BorderSizePixel = 0
         toggleFrame.ZIndex = 12
@@ -334,8 +318,8 @@ function ShadowUI:CreateWindow(title, size)
         
         local toggleSwitch = Instance.new("Frame")
         toggleSwitch.Name = "Switch"
-        toggleSwitch.Size = UDim2.new(0, 40, 0, 20)
-        toggleSwitch.Position = UDim2.new(1, -50, 0.5, -10)
+        toggleSwitch.Size = UDim2.new(0, 42, 0, 22)
+        toggleSwitch.Position = UDim2.new(1, -52, 0.5, -11)
         toggleSwitch.BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border
         toggleSwitch.BorderSizePixel = 0
         toggleSwitch.ZIndex = 13
@@ -349,7 +333,7 @@ function ShadowUI:CreateWindow(title, size)
         
         local switchIndicator = Instance.new("Frame")
         switchIndicator.Size = UDim2.new(0, 16, 0, 16)
-        switchIndicator.Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
+        switchIndicator.Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
         switchIndicator.BackgroundColor3 = ShadowUI.Config.Theme.Text
         switchIndicator.BorderSizePixel = 0
         switchIndicator.ZIndex = 14
@@ -367,9 +351,27 @@ function ShadowUI:CreateWindow(title, size)
         toggleClick.Parent = toggleFrame
         
         local function updateToggle()
+            -- Fancy pulse animation instead of ripple
+            local pulse = Instance.new("Frame")
+            pulse.Size = UDim2.new(0, 0, 0, 0)
+            pulse.Position = UDim2.new(0.5, 0, 0.5, 0)
+            pulse.AnchorPoint = Vector2.new(0.5, 0.5)
+            pulse.BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border
+            pulse.BackgroundTransparency = 0.7
+            pulse.BorderSizePixel = 0
+            pulse.ZIndex = 12
+            pulse.Parent = toggleSwitch
+            
+            local pulseCorner = Instance.new("UICorner")
+            pulseCorner.CornerRadius = UDim.new(1, 0)
+            pulseCorner.Parent = pulse
+            
+            Tween(pulse, {Size = UDim2.new(2, 0, 2, 0), BackgroundTransparency = 1}, 0.3)
+            
             Tween(toggleSwitch, {BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border})
-            Tween(switchIndicator, {Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)})
-            Tween(switchGlow, {ImageTransparency = enabled and 0.6 or 0.9})
+            Tween(switchIndicator, {Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)})
+            
+            game:GetService("Debris"):AddItem(pulse, 0.3)
             pcall(callback, enabled)
         end
         
@@ -382,7 +384,6 @@ function ShadowUI:CreateWindow(title, size)
         end)
         
         toggleClick.MouseButton1Click:Connect(function()
-            Ripple(toggleFrame, Mouse.X, Mouse.Y)
             enabled = not enabled
             updateToggle()
         end)
@@ -398,7 +399,7 @@ function ShadowUI:CreateWindow(title, size)
         }
     end
     
-    -- Slider Creator
+    -- Slider Creator (mobile-friendly)
     function window:CreateSlider(text, min, max, default, callback)
         min = min or 0
         max = max or 100
@@ -409,7 +410,7 @@ function ShadowUI:CreateWindow(title, size)
         
         local sliderFrame = Instance.new("Frame")
         sliderFrame.Name = "Slider_" .. text
-        sliderFrame.Size = UDim2.new(1, 0, 0, 50)
+        sliderFrame.Size = UDim2.new(1, 0, 0, 60) -- Taller for mobile
         sliderFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
         sliderFrame.BorderSizePixel = 0
         sliderFrame.ZIndex = 12
@@ -420,8 +421,8 @@ function ShadowUI:CreateWindow(title, size)
         sliderCorner.Parent = sliderFrame
         
         local sliderLabel = Instance.new("TextLabel")
-        sliderLabel.Size = UDim2.new(1, -60, 0, 25)
-        sliderLabel.Position = UDim2.new(0, 10, 0, 0)
+        sliderLabel.Size = UDim2.new(1, -80, 0, 25)
+        sliderLabel.Position = UDim2.new(0, 10, 0, 5)
         sliderLabel.BackgroundTransparency = 1
         sliderLabel.Font = Enum.Font.GothamMedium
         sliderLabel.Text = text
@@ -432,8 +433,8 @@ function ShadowUI:CreateWindow(title, size)
         sliderLabel.Parent = sliderFrame
         
         local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(0, 50, 0, 25)
-        valueLabel.Position = UDim2.new(1, -55, 0, 0)
+        valueLabel.Size = UDim2.new(0, 70, 0, 25)
+        valueLabel.Position = UDim2.new(1, -75, 0, 5)
         valueLabel.BackgroundTransparency = 1
         valueLabel.Font = Enum.Font.GothamMedium
         valueLabel.Text = tostring(value)
@@ -444,8 +445,8 @@ function ShadowUI:CreateWindow(title, size)
         valueLabel.Parent = sliderFrame
         
         local sliderBg = Instance.new("Frame")
-        sliderBg.Size = UDim2.new(1, -20, 0, 8)
-        sliderBg.Position = UDim2.new(0, 10, 0, 32)
+        sliderBg.Size = UDim2.new(1, -20, 0, 10) -- Slightly thicker for mobile
+        sliderBg.Position = UDim2.new(0, 10, 0, 37)
         sliderBg.BackgroundColor3 = ShadowUI.Config.Theme.Border
         sliderBg.BorderSizePixel = 0
         sliderBg.ZIndex = 13
@@ -469,8 +470,8 @@ function ShadowUI:CreateWindow(title, size)
         sliderFillCorner.Parent = sliderFill
         
         local sliderIndicator = Instance.new("Frame")
-        sliderIndicator.Size = UDim2.new(0, 16, 0, 16)
-        sliderIndicator.Position = UDim2.new(percent, -8, 0.5, -8)
+        sliderIndicator.Size = UDim2.new(0, 18, 0, 18) -- Larger for mobile
+        sliderIndicator.Position = UDim2.new(percent, -9, 0.5, -9)
         sliderIndicator.BackgroundColor3 = ShadowUI.Config.Theme.Text
         sliderIndicator.BorderSizePixel = 0
         sliderIndicator.ZIndex = 15
@@ -498,7 +499,7 @@ function ShadowUI:CreateWindow(title, size)
                 value = newValue
                 valueLabel.Text = tostring(value)
                 Tween(sliderFill, {Size = UDim2.new(percent, 0, 1, 0)})
-                Tween(sliderIndicator, {Position = UDim2.new(percent, -8, 0.5, -8)})
+                Tween(sliderIndicator, {Position = UDim2.new(percent, -9, 0.5, -9)})
                 pcall(callback, value)
             end
         end
@@ -510,14 +511,27 @@ function ShadowUI:CreateWindow(title, size)
             updateSlider(Mouse.X)
         end)
         
+        sliderClick.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                updateSlider(input.Position.X)
+            end
+        end)
+        
         sliderClick.MouseMoved:Connect(function()
             if dragging then
                 updateSlider(Mouse.X)
             end
         end)
         
+        sliderClick.InputChanged:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.Touch and dragging then
+                updateSlider(input.Position.X)
+            end
+        end)
+        
         UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
                 dragging = false
             end
         end)
@@ -536,7 +550,7 @@ function ShadowUI:CreateWindow(title, size)
                 local percent = (value - min) / (max - min)
                 valueLabel.Text = tostring(value)
                 Tween(sliderFill, {Size = UDim2.new(percent, 0, 1, 0)})
-                Tween(sliderIndicator, {Position = UDim2.new(percent, -8, 0.5, -8)})
+                Tween(sliderIndicator, {Position = UDim2.new(percent, -9, 0.5, -9)})
                 pcall(callback, value)
             end,
             GetValue = function()
@@ -545,13 +559,13 @@ function ShadowUI:CreateWindow(title, size)
         }
     end
     
-    -- Input Creator
+    -- Input Creator (mobile-friendly)
     function window:CreateInput(text, placeholder, callback)
         callback = callback or function() end
         
         local inputFrame = Instance.new("Frame")
         inputFrame.Name = "Input_" .. text
-        inputFrame.Size = UDim2.new(1, 0, 0, 60)
+        inputFrame.Size = UDim2.new(1, 0, 0, 70) -- Taller for mobile
         inputFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
         inputFrame.BorderSizePixel = 0
         inputFrame.ZIndex = 12
@@ -563,7 +577,7 @@ function ShadowUI:CreateWindow(title, size)
         
         local inputLabel = Instance.new("TextLabel")
         inputLabel.Size = UDim2.new(1, -20, 0, 25)
-        inputLabel.Position = UDim2.new(0, 10, 0, 0)
+        inputLabel.Position = UDim2.new(0, 10, 0, 5)
         inputLabel.BackgroundTransparency = 1
         inputLabel.Font = Enum.Font.GothamMedium
         inputLabel.Text = text
@@ -574,8 +588,8 @@ function ShadowUI:CreateWindow(title, size)
         inputLabel.Parent = inputFrame
         
         local inputBox = Instance.new("TextBox")
-        inputBox.Size = UDim2.new(1, -20, 0, 25)
-        inputBox.Position = UDim2.new(0, 10, 0, 25)
+        inputBox.Size = UDim2.new(1, -20, 0, 30) -- Taller for mobile
+        inputBox.Position = UDim2.new(0, 10, 0, 30)
         inputBox.BackgroundColor3 = ShadowUI.Config.Theme.Background
         inputBox.BorderSizePixel = 0
         inputBox.Font = Enum.Font.Gotham
@@ -583,7 +597,7 @@ function ShadowUI:CreateWindow(title, size)
         inputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
         inputBox.Text = ""
         inputBox.TextColor3 = ShadowUI.Config.Theme.Text
-        inputBox.TextSize = 12
+        inputBox.TextSize = 14 -- Larger for mobile
         inputBox.TextXAlignment = Enum.TextXAlignment.Left
         inputBox.ClearTextOnFocus = false
         inputBox.ZIndex = 13
