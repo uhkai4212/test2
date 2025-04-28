@@ -1,0 +1,451 @@
+-- MiniExploitUI - A lightweight UI library for Roblox exploiting
+-- Total lines: ~385
+
+local MiniExploitUI = {}
+MiniExploitUI.__index = MiniExploitUI
+
+-- Utility functions
+local function Tween(object, properties, duration, style, direction)
+    local tweenInfo = TweenInfo.new(duration or 0.5, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out)
+    local tween = game:GetService("TweenService"):Create(object, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+local function CreateInstance(className, properties)
+    local instance = Instance.new(className)
+    for k, v in pairs(properties or {}) do
+        instance[k] = v
+    end
+    return instance
+end
+
+local function ApplyRoundedCorners(frame, radius)
+    local uiCorner = Instance.new("UICorner", frame)
+    uiCorner.CornerRadius = UDim.new(0, radius or 4)
+    return uiCorner
+end
+
+local function ApplyDraggerBehavior(frame, parent)
+    local UserInputService = game:GetService("UserInputService")
+
+    local dragging = false
+    local dragInput
+    local dragStart
+    local startPos
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = parent.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+end
+
+-- Create a new UI window
+function MiniExploitUI.new(title, size, theme)
+    local self = setmetatable({}, MiniExploitUI)
+    
+    -- Default theme
+    self.theme = theme or {
+        background = Color3.fromRGB(40, 40, 40),
+        foreground = Color3.fromRGB(50, 50, 50),
+        accent = Color3.fromRGB(85, 170, 255),
+        text = Color3.fromRGB(255, 255, 255),
+        secondaryText = Color3.fromRGB(200, 200, 200),
+        border = Color3.fromRGB(60, 60, 60)
+    }
+    
+    self.screenGui = CreateInstance("ScreenGui", {
+        Name = "MiniExploitUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        Parent = game:GetService("CoreGui")
+    })
+    
+    self.main = CreateInstance("Frame", {
+        Name = "Main",
+        Size = size or UDim2.new(0, 400, 0, 300),
+        Position = UDim2.new(0.5, -200, 0.5, -150),
+        BackgroundColor3 = self.theme.background,
+        BorderSizePixel = 0,
+        Parent = self.screenGui
+    })
+    
+    ApplyRoundedCorners(self.main, 6)
+    
+    self.titleBar = CreateInstance("Frame", {
+        Name = "TitleBar",
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = self.theme.accent,
+        BorderSizePixel = 0,
+        Parent = self.main
+    })
+    
+    ApplyRoundedCorners(self.titleBar, 6)
+    
+    self.title = CreateInstance("TextLabel", {
+        Name = "Title",
+        Size = UDim2.new(1, -60, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 16,
+        Font = Enum.Font.SourceSansBold,
+        Text = title or "MiniExploitUI",
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = self.titleBar
+    })
+    
+    self.closeButton = CreateInstance("TextButton", {
+        Name = "CloseButton",
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -30, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 18,
+        Font = Enum.Font.SourceSansBold,
+        Text = "×",
+        Parent = self.titleBar
+    })
+    
+    self.minimizeButton = CreateInstance("TextButton", {
+        Name = "MinimizeButton",
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -60, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 18,
+        Font = Enum.Font.SourceSansBold,
+        Text = "-",
+        Parent = self.titleBar
+    })
+    
+    self.contentFrame = CreateInstance("Frame", {
+        Name = "Content",
+        Size = UDim2.new(1, -20, 1, -40),
+        Position = UDim2.new(0, 10, 0, 35),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Parent = self.main
+    })
+    
+    -- Setup dragging behavior
+    ApplyDraggerBehavior(self.titleBar, self.main)
+    
+    -- Setup close and minimize behavior
+    self.closeButton.MouseButton1Click:Connect(function()
+        self:Destroy()
+    end)
+    
+    self.minimizeButton.MouseButton1Click:Connect(function()
+        self:Toggle()
+    end)
+    
+    self.tabButtons = {}
+    self.tabPages = {}
+    self.isOpen = true
+    
+    return self
+end
+
+-- Add a tab to the UI
+function MiniExploitUI:AddTab(name)
+    local tabCount = #self.tabButtons
+    
+    -- Create tab button
+    local tabButton = CreateInstance("TextButton", {
+        Name = name .. "Tab",
+        Size = UDim2.new(0, 80, 0, 25),
+        Position = UDim2.new(0, tabCount * 85, 0, 0),
+        BackgroundColor3 = tabCount == 0 and self.theme.accent or self.theme.foreground,
+        TextColor3 = self.theme.text,
+        TextSize = 14,
+        Font = Enum.Font.SourceSans,
+        Text = name,
+        Parent = self.contentFrame
+    })
+    
+    ApplyRoundedCorners(tabButton, 4)
+    
+    -- Create tab page
+    local tabPage = CreateInstance("ScrollingFrame", {
+        Name = name .. "Page",
+        Size = UDim2.new(1, 0, 1, -30),
+        Position = UDim2.new(0, 0, 0, 30),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 4,
+        ScrollBarImageColor3 = self.theme.accent,
+        Visible = tabCount == 0,
+        Parent = self.contentFrame,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(0, 0, 0, 0)
+    })
+    
+    local uiListLayout = CreateInstance("UIListLayout", {
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Padding = UDim.new(0, 5),
+        Parent = tabPage
+    })
+    
+    table.insert(self.tabButtons, tabButton)
+    table.insert(self.tabPages, tabPage)
+    
+    tabButton.MouseButton1Click:Connect(function()
+        self:SelectTab(name)
+    end)
+    
+    return tabPage
+end
+
+-- Select a tab
+function MiniExploitUI:SelectTab(name)
+    for i, button in ipairs(self.tabButtons) do
+        local isSelected = button.Name == name .. "Tab"
+        button.BackgroundColor3 = isSelected and self.theme.accent or self.theme.foreground
+        self.tabPages[i].Visible = isSelected
+    end
+end
+
+-- Add a button to a tab
+function MiniExploitUI:AddButton(tabPage, text, callback)
+    local button = CreateInstance("TextButton", {
+        Name = text .. "Button",
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = self.theme.foreground,
+        TextColor3 = self.theme.text,
+        TextSize = 14,
+        Font = Enum.Font.SourceSans,
+        Text = text,
+        Parent = tabPage
+    })
+    
+    ApplyRoundedCorners(button, 4)
+    
+    button.MouseButton1Click:Connect(function()
+        if typeof(callback) == "function" then
+            callback()
+        end
+    end)
+    
+    return button
+end
+
+-- Add a toggle to a tab
+function MiniExploitUI:AddToggle(tabPage, text, default, callback)
+    local toggleContainer = CreateInstance("Frame", {
+        Name = text .. "Toggle",
+        Size = UDim2.new(1, 0, 0, 30),
+        BackgroundColor3 = self.theme.foreground,
+        Parent = tabPage
+    })
+    
+    ApplyRoundedCorners(toggleContainer, 4)
+    
+    local toggleLabel = CreateInstance("TextLabel", {
+        Name = "Label",
+        Size = UDim2.new(1, -50, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 14,
+        Font = Enum.Font.SourceSans,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = toggleContainer
+    })
+    
+    local toggleButton = CreateInstance("Frame", {
+        Name = "ToggleButton",
+        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -45, 0.5, -10),
+        BackgroundColor3 = default and self.theme.accent or self.theme.border,
+        Parent = toggleContainer
+    })
+    
+    local toggleIndicator = CreateInstance("Frame", {
+        Name = "Indicator",
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(default and 1 or 0, default and -18 or 2, 0.5, -8),
+        BackgroundColor3 = self.theme.text,
+        Parent = toggleButton
+    })
+    
+    ApplyRoundedCorners(toggleButton, 10)
+    ApplyRoundedCorners(toggleIndicator, 8)
+    
+    local isEnabled = default or false
+    
+    toggleContainer.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isEnabled = not isEnabled
+            
+            if isEnabled then
+                toggleButton.BackgroundColor3 = self.theme.accent
+                Tween(toggleIndicator, {Position = UDim2.new(1, -18, 0.5, -8)}, 0.2)
+            else
+                toggleButton.BackgroundColor3 = self.theme.border
+                Tween(toggleIndicator, {Position = UDim2.new(0, 2, 0.5, -8)}, 0.2)
+            end
+            
+            if typeof(callback) == "function" then
+                callback(isEnabled)
+            end
+        end
+    end)
+    
+    return toggleContainer, isEnabled
+end
+
+-- Add a slider to a tab
+function MiniExploitUI:AddSlider(tabPage, text, min, max, default, callback)
+    local sliderContainer = CreateInstance("Frame", {
+        Name = text .. "Slider",
+        Size = UDim2.new(1, 0, 0, 45),
+        BackgroundColor3 = self.theme.foreground,
+        Parent = tabPage
+    })
+    
+    ApplyRoundedCorners(sliderContainer, 4)
+    
+    local sliderLabel = CreateInstance("TextLabel", {
+        Name = "Label",
+        Size = UDim2.new(1, -50, 0, 20),
+        Position = UDim2.new(0, 10, 0, 5),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 14,
+        Font = Enum.Font.SourceSans,
+        Text = text,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = sliderContainer
+    })
+    
+    local valueLabel = CreateInstance("TextLabel", {
+        Name = "Value",
+        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -45, 0, 5),
+        BackgroundTransparency = 1,
+        TextColor3 = self.theme.text,
+        TextSize = 14,
+        Font = Enum.Font.SourceSans,
+        Text = tostring(default),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = sliderContainer
+    })
+    
+    local sliderBg = CreateInstance("Frame", {
+        Name = "Background",
+        Size = UDim2.new(1, -20, 0, 6),
+        Position = UDim2.new(0, 10, 0, 30),
+        BackgroundColor3 = self.theme.border,
+        Parent = sliderContainer
+    })
+    
+    ApplyRoundedCorners(sliderBg, 3)
+    
+    local sliderFill = CreateInstance("Frame", {
+        Name = "Fill",
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        BackgroundColor3 = self.theme.accent,
+        Parent = sliderBg
+    })
+    
+    ApplyRoundedCorners(sliderFill, 3)
+    
+    local sliderKnob = CreateInstance("Frame", {
+        Name = "Knob",
+        Size = UDim2.new(0, 12, 0, 12),
+        Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6),
+        BackgroundColor3 = self.theme.text,
+        Parent = sliderBg
+    })
+    
+    ApplyRoundedCorners(sliderKnob, 6)
+    
+    local currentValue = default
+    
+    local function updateSlider(value)
+        value = math.clamp(value, min, max)
+        value = math.floor(value * 10) / 10 -- Round to 1 decimal place
+        
+        local relativePos = (value - min) / (max - min)
+        sliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
+        sliderKnob.Position = UDim2.new(relativePos, -6, 0.5, -6)
+        valueLabel.Text = tostring(value)
+        
+        if typeof(callback) == "function" and currentValue ~= value then
+            currentValue = value
+            callback(value)
+        end
+    end
+    
+    local dragging = false
+    
+    sliderBg.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            
+            local relativeX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+            local value = min + (max - min) * relativeX
+            updateSlider(value)
+        end
+    end)
+    
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            local relativeX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
+            local value = min + (max - min) * relativeX
+            updateSlider(value)
+        end
+    end)
+    
+    updateSlider(default)
+    
+    return sliderContainer, function(value) updateSlider(value) end
+end
+
+-- Toggle visibility of UI
+function MiniExploitUI:Toggle()
+    self.isOpen = not self.isOpen
+    
+    if self.isOpen then
+        self.main.Size = UDim2.new(0, 400, 0, 300)
+    else
+        self.main.Size = UDim2.new(0, 400, 0, 30)
+    end
+end
+
+-- Destroy the UI
+function MiniExploitUI:Destroy()
+    self.screenGui:Destroy()
+end
+
+return MiniExploitUI
