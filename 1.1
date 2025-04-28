@@ -1,451 +1,2271 @@
--- MiniExploitUI - A lightweight UI library for Roblox exploiting
--- Total lines: ~385
-
-local MiniExploitUI = {}
-MiniExploitUI.__index = MiniExploitUI
-
--- Utility functions
-local function Tween(object, properties, duration, style, direction)
-    local tweenInfo = TweenInfo.new(duration or 0.5, style or Enum.EasingStyle.Quad, direction or Enum.EasingDirection.Out)
-    local tween = game:GetService("TweenService"):Create(object, tweenInfo, properties)
-    tween:Play()
-    return tween
-end
-
+-- SleekUI Library v1.0
+-- A comprehensive, feature-rich UI library for Roblox
+-- Features: Rounded corners, modern fonts, draggable windows,
+-- wide aspect ratio, optimized text sizes, shadows & glow effects, proper padding
+local SleekUI = {}
+SleekUI.__index = SleekUI
+-- Services
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
+-- Constants & Default Properties
+local FONTS = {
+PRIMARY = Enum.Font.GothamMedium,
+SECONDARY = Enum.Font.GothamSemibold,
+TITLE = Enum.Font.GothamBold
+}
+local COLORS = {
+BACKGROUND = Color3.fromRGB(30, 30, 35),
+SECONDARY_BG = Color3.fromRGB(40, 40, 45),
+TEXT_PRIMARY = Color3.fromRGB(255, 255, 255),
+TEXT_SECONDARY = Color3.fromRGB(200, 200, 200),
+ACCENT = Color3.fromRGB(66, 134, 244),
+ACCENT_DARK = Color3.fromRGB(56, 114, 224),
+SUCCESS = Color3.fromRGB(68, 214, 102),
+WARNING = Color3.fromRGB(246, 190, 66),
+ERROR = Color3.fromRGB(242, 82, 82)
+}
+local SIZING = {
+TEXT_SIZE = {
+SMALL = 12,
+REGULAR = 14,
+MEDIUM = 16,
+LARGE = 18,
+TITLE = 22
+},
+CORNER_RADIUS = UDim.new(0, 8),
+PADDING = {
+SMALL = UDim.new(0, 6),
+REGULAR = UDim.new(0, 10),
+MEDIUM = UDim.new(0, 14),
+LARGE = UDim.new(0, 20)
+},
+SHADOW = {
+OFFSET = 6,
+TRANSPARENCY = 0.5,
+SIZE = UDim2.new(1, 10, 1, 10)
+},
+GLOW = {
+SIZE = 15,
+TRANSPARENCY = 0.7
+}
+}
+-- Helper Functions
 local function CreateInstance(className, properties)
-    local instance = Instance.new(className)
-    for k, v in pairs(properties or {}) do
-        instance[k] = v
+local instance = Instance.new(className)
+for k, v in pairs(properties) do
+instance[k] = v
+end
+return instance
+end
+local function AddRoundedCorners(frame, radius)
+local corner = CreateInstance("UICorner", {
+CornerRadius = radius or SIZING.CORNER_RADIUS,
+Parent = frame
+})
+return corner
+end
+local function AddPadding(frame, padding)
+local uiPadding = CreateInstance("UIPadding", {
+PaddingTop = padding or SIZING.PADDING.REGULAR,
+PaddingBottom = padding or SIZING.PADDING.REGULAR,
+PaddingLeft = padding or SIZING.PADDING.REGULAR,
+PaddingRight = padding or SIZING.PADDING.REGULAR,
+Parent = frame
+})
+return uiPadding
+end
+local function AddListLayout(frame, padding)
+local listLayout = CreateInstance("UIListLayout", {
+Padding = UDim.new(0, padding or 8),
+SortOrder = Enum.SortOrder.LayoutOrder,
+Parent = frame
+})
+return listLayout
+end
+local function AddShadow(frame, transparency, size, zIndexOffset)
+local shadow = CreateInstance("ImageLabel", {
+Name = "Shadow",
+BackgroundTransparency = 1,
+Image = "rbxassetid://1316045217", -- Shadow image asset
+ImageColor3 = Color3.fromRGB(0, 0, 0),
+ImageTransparency = transparency or SIZING.SHADOW.TRANSPARENCY,
+Position = UDim2.new(0.5, 0, 0.5, 0),
+AnchorPoint = Vector2.new(0.5, 0.5),
+Size = size or SIZING.SHADOW.SIZE,
+ZIndex = (frame.ZIndex - (zIndexOffset or 1)),
+Parent = frame
+})
+return shadow
+end
+local function AddGlow(frame, color, transparency, size, zIndexOffset)
+local glow = CreateInstance("ImageLabel", {
+Name = "Glow",
+BackgroundTransparency = 1,
+Image = "rbxassetid://151205964", -- Glow image asset
+ImageColor3 = color or COLORS.ACCENT,
+ImageTransparency = transparency or SIZING.GLOW.TRANSPARENCY,
+Position = UDim2.new(0.5, 0, 0.5, 0),
+AnchorPoint = Vector2.new(0.5, 0.5),
+Size = UDim2.new(1, size or SIZING.GLOW.SIZE, 1, size or SIZING.GLOW.SIZE),
+ZIndex = (frame.ZIndex - (zIndexOffset or 1)),
+Parent = frame
+})
+return glow
+end
+local function MakeDraggable(frame, dragHandle)
+local dragInput, dragStart, startPos
+local dragging = false
+local function UpdatePosition(input)
+    local delta = input.Position - dragStart
+    frame.Position = UDim2.new(
+        startPos.X.Scale, 
+        startPos.X.Offset + delta.X, 
+        startPos.Y.Scale, 
+        startPos.Y.Offset + delta.Y
+    )
+end
+
+dragHandle = dragHandle or frame
+
+dragHandle.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
-    return instance
+end)
+
+dragHandle.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and (input == dragInput) then
+        UpdatePosition(input)
+    end
+end)
 end
-
-local function ApplyRoundedCorners(frame, radius)
-    local uiCorner = Instance.new("UICorner", frame)
-    uiCorner.CornerRadius = UDim.new(0, radius or 4)
-    return uiCorner
+-- Create ScreenGui
+function SleekUI:CreateScreenGui(name)
+local player = Players.LocalPlayer
+if not player then
+repeat
+player = Players.LocalPlayer
+wait()
+until player
 end
+local screenGui = CreateInstance("ScreenGui", {
+    Name = name or "SleekUI",
+    Parent = player:WaitForChild("PlayerGui"),
+    ResetOnSpawn = false,
+    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+})
 
-local function ApplyDraggerBehavior(frame, parent)
-    local UserInputService = game:GetService("UserInputService")
-
-    local dragging = false
-    local dragInput
-    local dragStart
-    local startPos
-    
-    frame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = parent.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    
-    frame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
-    end)
+return screenGui
 end
+-- Create a Window
+function SleekUI:CreateWindow(parent, title, size, position)
+-- Default to a wider-than-taller window size
+local windowSize = size or UDim2.new(0, 500, 0, 300)
+local windowPosition = position or UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2)
+-- Create window frame
+local window = CreateInstance("Frame", {
+    Name = title or "Window",
+    BackgroundColor3 = COLORS.BACKGROUND,
+    BorderSizePixel = 0,
+    Position = windowPosition,
+    Size = windowSize,
+    ZIndex = 2,
+    Parent = parent
+})
 
--- Create a new UI window
-function MiniExploitUI.new(title, size, theme)
-    local self = setmetatable({}, MiniExploitUI)
-    
-    -- Default theme
-    self.theme = theme or {
-        background = Color3.fromRGB(40, 40, 40),
-        foreground = Color3.fromRGB(50, 50, 50),
-        accent = Color3.fromRGB(85, 170, 255),
-        text = Color3.fromRGB(255, 255, 255),
-        secondaryText = Color3.fromRGB(200, 200, 200),
-        border = Color3.fromRGB(60, 60, 60)
-    }
-    
-    self.screenGui = CreateInstance("ScreenGui", {
-        Name = "MiniExploitUI",
-        ResetOnSpawn = false,
-        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-        Parent = game:GetService("CoreGui")
-    })
-    
-    self.main = CreateInstance("Frame", {
-        Name = "Main",
-        Size = size or UDim2.new(0, 400, 0, 300),
-        Position = UDim2.new(0.5, -200, 0.5, -150),
-        BackgroundColor3 = self.theme.background,
-        BorderSizePixel = 0,
-        Parent = self.screenGui
-    })
-    
-    ApplyRoundedCorners(self.main, 6)
-    
-    self.titleBar = CreateInstance("Frame", {
-        Name = "TitleBar",
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = self.theme.accent,
-        BorderSizePixel = 0,
-        Parent = self.main
-    })
-    
-    ApplyRoundedCorners(self.titleBar, 6)
-    
-    self.title = CreateInstance("TextLabel", {
+-- Add rounded corners
+AddRoundedCorners(window)
+
+-- Add shadow
+AddShadow(window)
+
+-- Create title bar
+local titleBar = CreateInstance("Frame", {
+    Name = "TitleBar",
+    BackgroundColor3 = COLORS.SECONDARY_BG,
+    BorderSizePixel = 0,
+    Size = UDim2.new(1, 0, 0, 36),
+    ZIndex = 3,
+    Parent = window
+})
+
+-- Add rounded corners to title bar (top corners only)
+local titleCorner = CreateInstance("UICorner", {
+    CornerRadius = SIZING.CORNER_RADIUS,
+    Parent = titleBar
+})
+
+-- Create title text
+local titleText = CreateInstance("TextLabel", {
+    Name = "Title",
+    BackgroundTransparency = 1,
+    Font = FONTS.TITLE,
+    Text = title or "Window",
+    TextColor3 = COLORS.TEXT_PRIMARY,
+    TextSize = SIZING.TEXT_SIZE.MEDIUM,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Size = UDim2.new(1, -80, 1, 0),
+    Position = UDim2.new(0, 12, 0, 0),
+    ZIndex = 4,
+    Parent = titleBar
+})
+
+-- Create minimize button
+local minimizeButton = CreateInstance("TextButton", {
+    Name = "Minimize",
+    BackgroundColor3 = COLORS.WARNING,
+    BorderSizePixel = 0,
+    Position = UDim2.new(1, -68, 0.5, -8),
+    Size = UDim2.new(0, 16, 0, 16),
+    Text = "",
+    ZIndex = 4,
+    Parent = titleBar
+})
+
+-- Add rounded corners to minimize button
+AddRoundedCorners(minimizeButton, UDim.new(1, 0))
+
+-- Create close button
+local closeButton = CreateInstance("TextButton", {
+    Name = "Close",
+    BackgroundColor3 = COLORS.ERROR,
+    BorderSizePixel = 0,
+    Position = UDim2.new(1, -32, 0.5, -8),
+    Size = UDim2.new(0, 16, 0, 16),
+    Text = "",
+    ZIndex = 4,
+    Parent = titleBar
+})
+
+-- Add rounded corners to close button
+AddRoundedCorners(closeButton, UDim.new(1, 0))
+
+-- Create container for content
+local container = CreateInstance("ScrollingFrame", {
+    Name = "Container",
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 0, 0, 36),
+    Size = UDim2.new(1, 0, 1, -36),
+    ScrollBarThickness = 4,
+    ScrollBarImageColor3 = COLORS.ACCENT,
+    VerticalScrollBarPosition = Enum.VerticalScrollBarPosition.Right,
+    ZIndex = 3,
+    Parent = window,
+    ClipsDescendants = true,
+    CanvasSize = UDim2.new(0, 0, 0, 0) -- Will auto-update based on content
+})
+
+-- Add padding to container
+AddPadding(container)
+
+-- Add list layout for auto-positioning content
+local listLayout = AddListLayout(container)
+
+-- Auto-update canvas size
+listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    container.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 20)
+end)
+
+-- Add close button functionality
+closeButton.MouseButton1Click:Connect(function()
+    window.Visible = false
+end)
+
+-- Add minimize button functionality
+local minimized = false
+local originalSize = windowSize
+minimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        window:TweenSize(UDim2.new(windowSize.X.Scale, windowSize.X.Offset, 0, 36), 
+            Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        container.Visible = false
+    else
+        window:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+        container.Visible = true
+    end
+end)
+
+-- Make window draggable
+MakeDraggable(window, titleBar)
+
+-- Return window components
+return {
+    Window = window,
+    Container = container,
+    TitleBar = titleBar,
+    Title = titleText,
+    Minimized = function() return minimized end,
+    Toggle = function() 
+        minimized = not minimized
+        if minimized then
+            window:TweenSize(UDim2.new(windowSize.X.Scale, windowSize.X.Offset, 0, 36), 
+                Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+            container.Visible = false
+        else
+            window:TweenSize(originalSize, Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+            container.Visible = true
+        end
+    end,
+    Hide = function() window.Visible = false end,
+    Show = function() window.Visible = true end
+}
+end
+-- Create a Section (grouping of elements)
+function SleekUI:CreateSection(parent, title)
+local section = CreateInstance("Frame", {
+Name = title or "Section",
+BackgroundColor3 = COLORS.SECONDARY_BG,
+BorderSizePixel = 0,
+Size = UDim2.new(1, 0, 0, 36), -- Will auto-resize based on content
+ZIndex = 4,
+Parent = parent,
+AutomaticSize = Enum.AutomaticSize.Y
+})
+-- Add rounded corners
+AddRoundedCorners(section)
+
+-- Add shadow
+AddShadow(section, 0.7, UDim2.new(1, 6, 1, 6), 0)
+
+-- Create title (if provided)
+if title then
+    local sectionTitle = CreateInstance("TextLabel", {
         Name = "Title",
-        Size = UDim2.new(1, -60, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
         BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 16,
-        Font = Enum.Font.SourceSansBold,
-        Text = title or "MiniExploitUI",
+        Font = FONTS.SECONDARY,
+        Text = title,
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.MEDIUM,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = self.titleBar
+        Size = UDim2.new(1, -20, 0, 30),
+        Position = UDim2.new(0, 10, 0, 0),
+        ZIndex = 5,
+        Parent = section
     })
-    
-    self.closeButton = CreateInstance("TextButton", {
-        Name = "CloseButton",
-        Size = UDim2.new(0, 30, 0, 30),
-        Position = UDim2.new(1, -30, 0, 0),
-        BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 18,
-        Font = Enum.Font.SourceSansBold,
-        Text = "×",
-        Parent = self.titleBar
-    })
-    
-    self.minimizeButton = CreateInstance("TextButton", {
-        Name = "MinimizeButton",
-        Size = UDim2.new(0, 30, 0, 30),
-        Position = UDim2.new(1, -60, 0, 0),
-        BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 18,
-        Font = Enum.Font.SourceSansBold,
-        Text = "-",
-        Parent = self.titleBar
-    })
-    
-    self.contentFrame = CreateInstance("Frame", {
-        Name = "Content",
-        Size = UDim2.new(1, -20, 1, -40),
-        Position = UDim2.new(0, 10, 0, 35),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        Parent = self.main
-    })
-    
-    -- Setup dragging behavior
-    ApplyDraggerBehavior(self.titleBar, self.main)
-    
-    -- Setup close and minimize behavior
-    self.closeButton.MouseButton1Click:Connect(function()
-        self:Destroy()
-    end)
-    
-    self.minimizeButton.MouseButton1Click:Connect(function()
-        self:Toggle()
-    end)
-    
-    self.tabButtons = {}
-    self.tabPages = {}
-    self.isOpen = true
-    
-    return self
 end
 
--- Add a tab to the UI
-function MiniExploitUI:AddTab(name)
-    local tabCount = #self.tabButtons
+-- Create container for content
+local container = CreateInstance("Frame", {
+    Name = "Content",
+    BackgroundTransparency = 1,
+    Position = UDim2.new(0, 0, 0, title and 30 or 0),
+    Size = UDim2.new(1, 0, 0, 0),
+    ZIndex = 5,
+    Parent = section,
+    AutomaticSize = Enum.AutomaticSize.Y
+})
+
+-- Add padding to container
+AddPadding(container)
+
+-- Add list layout for auto-positioning content
+local listLayout = AddListLayout(container)
+
+return {
+    Section = section,
+    Container = container
+}
+end
+-- Create a Button
+function SleekUI:CreateButton(parent, text, callback)
+local button = CreateInstance("TextButton", {
+Name = text or "Button",
+BackgroundColor3 = COLORS.ACCENT,
+BorderSizePixel = 0,
+Size = UDim2.new(1, 0, 0, 36),
+Font = FONTS.PRIMARY,
+Text = text or "Button",
+TextColor3 = COLORS.TEXT_PRIMARY,
+TextSize = SIZING.TEXT_SIZE.MEDIUM,
+ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+Parent = parent,
+LayoutOrder = 1
+})
+-- Add rounded corners
+AddRoundedCorners(button)
+
+-- Add shadow
+AddShadow(button, 0.6, UDim2.new(1, 4, 1, 4), -1)
+
+-- Add hover and click effects
+button.MouseEnter:Connect(function()
+    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.ACCENT_DARK}):Play()
+end)
+
+button.MouseLeave:Connect(function()
+    TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.ACCENT}):Play()
+end)
+
+button.MouseButton1Down:Connect(function()
+    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -4, 0, 34)}):Play()
+    TweenService:Create(button, TweenInfo.new(0.1), {Position = UDim2.new(0, 2, 0, 1)}):Play()
+end)
+
+button.MouseButton1Up:Connect(function()
+    TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, 0, 0, 36)}):Play()
+    TweenService:Create(button, TweenInfo.new(0.1), {Position = UDim2.new(0, 0, 0, 0)}):Play()
     
-    -- Create tab button
-    local tabButton = CreateInstance("TextButton", {
-        Name = name .. "Tab",
-        Size = UDim2.new(0, 80, 0, 25),
-        Position = UDim2.new(0, tabCount * 85, 0, 0),
-        BackgroundColor3 = tabCount == 0 and self.theme.accent or self.theme.foreground,
-        TextColor3 = self.theme.text,
-        TextSize = 14,
-        Font = Enum.Font.SourceSans,
-        Text = name,
-        Parent = self.contentFrame
-    })
+    if callback then callback() end
+end)
+
+return button
+end
+-- Create a Label
+function SleekUI:CreateLabel(parent, text, textSize, alignment)
+local label = CreateInstance("TextLabel", {
+Name = "Label",
+BackgroundTransparency = 1,
+Size = UDim2.new(1, 0, 0, textSize and (textSize + 10) or (SIZING.TEXT_SIZE.REGULAR + 10)),
+Font = FONTS.PRIMARY,
+Text = text or "Label",
+TextColor3 = COLORS.TEXT_SECONDARY,
+TextSize = textSize or SIZING.TEXT_SIZE.REGULAR,
+TextWrapped = true,
+TextXAlignment = alignment or Enum.TextXAlignment.Left,
+ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+Parent = parent,
+LayoutOrder = 2
+})
+return label
+end
+-- Create a TextBox
+function SleekUI:CreateTextBox(parent, placeholderText, defaultText, callback)
+local textBoxFrame = CreateInstance("Frame", {
+Name = "TextBoxFrame",
+BackgroundColor3 = COLORS.SECONDARY_BG,
+BorderSizePixel = 0,
+Size = UDim2.new(1, 0, 0, 36),
+ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+Parent = parent,
+LayoutOrder = 3
+})
+-- Add rounded corners
+AddRoundedCorners(textBoxFrame)
+
+local textBox = CreateInstance("TextBox", {
+    Name = "TextBox",
+    BackgroundTransparency = 1,
+    ClearTextOnFocus = false,
+    Font = FONTS.PRIMARY,
+    PlaceholderText = placeholderText or "Enter text...",
+    PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+    Text = defaultText or "",
+    TextColor3 = COLORS.TEXT_PRIMARY,
+    TextSize = SIZING.TEXT_SIZE.REGULAR,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    Size = UDim2.new(1, -20, 1, 0),
+    Position = UDim2.new(0, 10, 0, 0),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = textBoxFrame
+})
+
+-- Add focus highlight and glow
+textBox.Focused:Connect(function()
+    AddGlow(textBoxFrame, COLORS.ACCENT, 0.8, 10)
+    TweenService:Create(textBoxFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 55)}):Play()
+end)
+
+textBox.FocusLost:Connect(function(enterPressed)
+    if textBoxFrame:FindFirstChild("Glow") then
+        textBoxFrame.Glow:Destroy()
+    end
+    TweenService:Create(textBoxFrame, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.SECONDARY_BG}):Play()
     
-    ApplyRoundedCorners(tabButton, 4)
-    
-    -- Create tab page
-    local tabPage = CreateInstance("ScrollingFrame", {
-        Name = name .. "Page",
-        Size = UDim2.new(1, 0, 1, -30),
-        Position = UDim2.new(0, 0, 0, 30),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = self.theme.accent,
-        Visible = tabCount == 0,
-        Parent = self.contentFrame,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(0, 0, 0, 0)
-    })
-    
-    local uiListLayout = CreateInstance("UIListLayout", {
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        Padding = UDim.new(0, 5),
-        Parent = tabPage
-    })
-    
-    table.insert(self.tabButtons, tabButton)
-    table.insert(self.tabPages, tabPage)
-    
-    tabButton.MouseButton1Click:Connect(function()
-        self:SelectTab(name)
-    end)
-    
-    return tabPage
+    if enterPressed and callback then
+        callback(textBox.Text)
+    end
+end)
+
+return {
+    Frame = textBoxFrame,
+    TextBox = textBox,
+    GetText = function() return textBox.Text end,
+    SetText = function(text) textBox.Text = text end
+}
+end
+-- Create a Toggle
+function SleekUI:CreateToggle(parent, text, default, callback)
+local toggle = CreateInstance("Frame", {
+Name = "Toggle",
+BackgroundTransparency = 1,
+Size = UDim2.new(1, 0, 0, 36),
+ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+Parent = parent,
+LayoutOrder = 4
+})
+local label = CreateInstance("TextLabel", {
+    Name = "Label",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, -60, 1, 0),
+    Font = FONTS.PRIMARY,
+    Text = text or "Toggle",
+    TextColor3 = COLORS.TEXT_PRIMARY,
+    TextSize = SIZING.TEXT_SIZE.REGULAR,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = toggle
+})
+
+local toggleButton = CreateInstance("Frame", {
+    Name = "ToggleButton",
+    BackgroundColor3 = default and COLORS.ACCENT or Color3.fromRGB(80, 80, 85),
+    BorderSizePixel = 0,
+    Position = UDim2.new(1, -50, 0.5, -10),
+    Size = UDim2.new(0, 46, 0, 20),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = toggle
+})
+
+-- Add rounded corners
+AddRoundedCorners(toggleButton, UDim.new(0, 10))
+
+-- Add glow if enabled by default
+if default then
+    AddGlow(toggleButton, COLORS.ACCENT, 0.85, 8)
 end
 
--- Select a tab
-function MiniExploitUI:SelectTab(name)
-    for i, button in ipairs(self.tabButtons) do
-        local isSelected = button.Name == name .. "Tab"
-        button.BackgroundColor3 = isSelected and self.theme.accent or self.theme.foreground
-        self.tabPages[i].Visible = isSelected
+local toggleCircle = CreateInstance("Frame", {
+    Name = "Circle",
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BorderSizePixel = 0,
+    Position = default and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+    Size = UDim2.new(0, 16, 0, 16),
+    AnchorPoint = Vector2.new(0, 0.5),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+    Parent = toggleButton
+})
+
+-- Add rounded corners to circle and shadow
+AddRoundedCorners(toggleCircle, UDim.new(1, 0))
+AddShadow(toggleCircle, 0.5, UDim2.new(1, 4, 1, 4), -1)
+
+-- Toggle state
+local enabled = default or false
+
+-- Function to update toggle visuals
+local function updateToggle()
+    if enabled then
+        -- Add glow if not already present
+        if not toggleButton:FindFirstChild("Glow") then
+            AddGlow(toggleButton, COLORS.ACCENT, 0.85, 8)
+        end
+        TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.ACCENT}):Play()
+        TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0)}):Play()
+    else
+        -- Remove glow if present
+        if toggleButton:FindFirstChild("Glow") then
+            toggleButton.Glow:Destroy()
+        end
+        TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 85)}):Play()
+        TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0)}):Play()
+    end
+    
+    if callback then
+        callback(enabled)
     end
 end
 
--- Add a button to a tab
-function MiniExploitUI:AddButton(tabPage, text, callback)
-    local button = CreateInstance("TextButton", {
-        Name = text .. "Button",
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = self.theme.foreground,
-        TextColor3 = self.theme.text,
-        TextSize = 14,
-        Font = Enum.Font.SourceSans,
-        Text = text,
-        Parent = tabPage
-    })
+-- Make toggle clickable
+toggleButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        enabled = not enabled
+        updateToggle()
+    end
+end)
+
+-- Make label clickable too
+label.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        enabled = not enabled
+        updateToggle()
+    end
+end)
+
+return {
+    Frame = toggle,
+    Enabled = function() return enabled end,
+    SetEnabled = function(value)
+        enabled = value and true or false
+        updateToggle()
+    end,
+    Toggle = function()
+        enabled = not enabled
+        updateToggle()
+    end
+}
+end
+-- Create a Slider
+function SleekUI:CreateSlider(parent, text, min, max, default, callback)
+min = min or 0
+max = max or 100
+default = math.clamp(default or min, min, max)
+local slider = CreateInstance("Frame", {
+    Name = "Slider",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 0, 50),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+    Parent = parent,
+    LayoutOrder = 5
+})
+
+local labelContainer = CreateInstance("Frame", {
+    Name = "LabelContainer",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, 0, 0, 20),
+    Position = UDim2.new(0, 0, 0, 0),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+    Parent = slider
+})
+
+local label = CreateInstance("TextLabel", {
+    Name = "Label",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(1, -50, 1, 0),
+    Position = UDim2.new(0, 0, 0, 0),
+    Font = FONTS.PRIMARY,
+    Text = text or "Slider",
+    TextColor3 = COLORS.TEXT_PRIMARY,
+    TextSize = SIZING.TEXT_SIZE.REGULAR,
+    TextXAlignment = Enum.TextXAlignment.Left,
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = labelContainer
+})
+
+local valueLabel = CreateInstance("TextLabel", {
+    Name = "Value",
+    BackgroundTransparency = 1,
+    Size = UDim2.new(0, 46, 1, 0),
+    Position = UDim2.new(1, -46, 0, 0),
+    Font = FONTS.PRIMARY,
+    Text = tostring(default),
+    TextColor3 = COLORS.ACCENT,
+    TextSize = SIZING.TEXT_SIZE.REGULAR,
+    TextXAlignment = Enum.TextXAlignment.Right,
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = labelContainer
+})
+
+local sliderBar = CreateInstance("Frame", {
+    Name = "SliderBar",
+    BackgroundColor3 = Color3.fromRGB(60, 60, 65),
+    BorderSizePixel = 0,
+    Position = UDim2.new(0, 0, 0, 28),
+    Size = UDim2.new(1, 0, 0, 6),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+    Parent = slider
+})
+
+-- Add rounded corners to slider bar
+AddRoundedCorners(sliderBar, UDim.new(0, 3))
+
+local sliderFill = CreateInstance("Frame", {
+    Name = "SliderFill",
+    BackgroundColor3 = COLORS.ACCENT,
+    BorderSizePixel = 0,
+    Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+    Parent = sliderBar
+})
+
+-- Add rounded corners to slider fill
+AddRoundedCorners(sliderFill, UDim.new(0, 3))
+
+-- Add glow to slider fill
+AddGlow(sliderFill, COLORS.ACCENT, 0.85, 5)
+
+local sliderButton = CreateInstance("Frame", {
+    Name = "SliderButton",
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+    BorderSizePixel = 0,
+    Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+    Size = UDim2.new(0, 16, 0, 16),
+    AnchorPoint = Vector2.new(0.5, 0.5),
+    ZIndex = parent.ZIndex and (parent.ZIndex + 4) or 8,
+    Parent = sliderBar
+})
+
+-- Add rounded corners to slider button
+AddRoundedCorners(sliderButton, UDim.new(1, 0))
+
+-- Add shadow to slider button
+AddShadow(sliderButton, 0.4, UDim2.new(1, 4, 1, 4), -1)
+
+-- Current value
+local value = default
+
+-- Slider functionality
+local dragging = false
+
+local function updateSlider(input)
+    local xPos = math.clamp(
+        (input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X,
+        0,
+        1
+    )
     
-    ApplyRoundedCorners(button, 4)
+    -- Update slider visuals
+    sliderFill.Size = UDim2.new(xPos, 0, 1, 0)
+    sliderButton.Position = UDim2.new(xPos, 0, 0.5, 0)
     
-    button.MouseButton1Click:Connect(function()
-        if typeof(callback) == "function" then
-            callback()
-        end
-    end)
+    -- Calculate and set value
+    value = min + (max - min) * xPos
+    valueLabel.Text = tostring(math.floor(value))
     
-    return button
+    if callback then
+        callback(value)
+    end
 end
 
--- Add a toggle to a tab
-function MiniExploitUI:AddToggle(tabPage, text, default, callback)
-    local toggleContainer = CreateInstance("Frame", {
-        Name = text .. "Toggle",
-        Size = UDim2.new(1, 0, 0, 30),
-        BackgroundColor3 = self.theme.foreground,
-        Parent = tabPage
-    })
-    
-    ApplyRoundedCorners(toggleContainer, 4)
-    
-    local toggleLabel = CreateInstance("TextLabel", {
-        Name = "Label",
-        Size = UDim2.new(1, -50, 1, 0),
-        Position = UDim2.new(0, 10, 0, 0),
-        BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 14,
-        Font = Enum.Font.SourceSans,
-        Text = text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = toggleContainer
-    })
-    
-    local toggleButton = CreateInstance("Frame", {
-        Name = "ToggleButton",
-        Size = UDim2.new(0, 40, 0, 20),
-        Position = UDim2.new(1, -45, 0.5, -10),
-        BackgroundColor3 = default and self.theme.accent or self.theme.border,
-        Parent = toggleContainer
-    })
-    
-    local toggleIndicator = CreateInstance("Frame", {
-        Name = "Indicator",
-        Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(default and 1 or 0, default and -18 or 2, 0.5, -8),
-        BackgroundColor3 = self.theme.text,
-        Parent = toggleButton
-    })
-    
-    ApplyRoundedCorners(toggleButton, 10)
-    ApplyRoundedCorners(toggleIndicator, 8)
-    
-    local isEnabled = default or false
-    
-    toggleContainer.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            isEnabled = not isEnabled
-            
-            if isEnabled then
-                toggleButton.BackgroundColor3 = self.theme.accent
-                Tween(toggleIndicator, {Position = UDim2.new(1, -18, 0.5, -8)}, 0.2)
-            else
-                toggleButton.BackgroundColor3 = self.theme.border
-                Tween(toggleIndicator, {Position = UDim2.new(0, 2, 0.5, -8)}, 0.2)
-            end
-            
-            if typeof(callback) == "function" then
-                callback(isEnabled)
-            end
-        end
-    end)
-    
-    return toggleContainer, isEnabled
-end
+sliderBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        updateSlider(input)
+    end
+end)
 
--- Add a slider to a tab
-function MiniExploitUI:AddSlider(tabPage, text, min, max, default, callback)
-    local sliderContainer = CreateInstance("Frame", {
-        Name = text .. "Slider",
-        Size = UDim2.new(1, 0, 0, 45),
-        BackgroundColor3 = self.theme.foreground,
-        Parent = tabPage
-    })
-    
-    ApplyRoundedCorners(sliderContainer, 4)
-    
-    local sliderLabel = CreateInstance("TextLabel", {
-        Name = "Label",
-        Size = UDim2.new(1, -50, 0, 20),
-        Position = UDim2.new(0, 10, 0, 5),
-        BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 14,
-        Font = Enum.Font.SourceSans,
-        Text = text,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = sliderContainer
-    })
-    
-    local valueLabel = CreateInstance("TextLabel", {
-        Name = "Value",
-        Size = UDim2.new(0, 40, 0, 20),
-        Position = UDim2.new(1, -45, 0, 5),
-        BackgroundTransparency = 1,
-        TextColor3 = self.theme.text,
-        TextSize = 14,
-        Font = Enum.Font.SourceSans,
-        Text = tostring(default),
-        TextXAlignment = Enum.TextXAlignment.Right,
-        Parent = sliderContainer
-    })
-    
-    local sliderBg = CreateInstance("Frame", {
-        Name = "Background",
-        Size = UDim2.new(1, -20, 0, 6),
-        Position = UDim2.new(0, 10, 0, 30),
-        BackgroundColor3 = self.theme.border,
-        Parent = sliderContainer
-    })
-    
-    ApplyRoundedCorners(sliderBg, 3)
-    
-    local sliderFill = CreateInstance("Frame", {
-        Name = "Fill",
-        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
-        BackgroundColor3 = self.theme.accent,
-        Parent = sliderBg
-    })
-    
-    ApplyRoundedCorners(sliderFill, 3)
-    
-    local sliderKnob = CreateInstance("Frame", {
-        Name = "Knob",
-        Size = UDim2.new(0, 12, 0, 12),
-        Position = UDim2.new((default - min) / (max - min), -6, 0.5, -6),
-        BackgroundColor3 = self.theme.text,
-        Parent = sliderBg
-    })
-    
-    ApplyRoundedCorners(sliderKnob, 6)
-    
-    local currentValue = default
-    
-    local function updateSlider(value)
-        value = math.clamp(value, min, max)
-        value = math.floor(value * 10) / 10 -- Round to 1 decimal place
+sliderButton.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        updateSlider(input)
+    end
+end)
+
+return {
+    Frame = slider,
+    GetValue = function() return value end,
+    SetValue = function(newValue)
+        value = math.clamp(newValue, min, max)
+        local xPos = (value - min) / (max - min)
+        sliderFill.Size = UDim2.new(xPos, 0, 1, 0)
+        sliderButton.Position = UDim2.new(xPos, 0, 0.5, 0)
+        valueLabel.Text = tostring(math.floor(value))
         
-        local relativePos = (value - min) / (max - min)
-        sliderFill.Size = UDim2.new(relativePos, 0, 1, 0)
-        sliderKnob.Position = UDim2.new(relativePos, -6, 0.5, -6)
-        valueLabel.Text = tostring(value)
-        
-        if typeof(callback) == "function" and currentValue ~= value then
-            currentValue = value
+        if callback then
             callback(value)
         end
     end
-    
-    local dragging = false
-    
-    sliderBg.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            
-            local relativeX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-            local value = min + (max - min) * relativeX
-            updateSlider(value)
-        end
-    end)
-    
-    game:GetService("UserInputService").InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-        end
-    end)
-    
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local relativeX = math.clamp((input.Position.X - sliderBg.AbsolutePosition.X) / sliderBg.AbsoluteSize.X, 0, 1)
-            local value = min + (max - min) * relativeX
-            updateSlider(value)
-        end
-    end)
-    
-    updateSlider(default)
-    
-    return sliderContainer, function(value) updateSlider(value) end
+}
 end
 
--- Toggle visibility of UI
-function MiniExploitUI:Toggle()
-    self.isOpen = not self.isOpen
+-- Create a Dropdown
+function SleekUI:CreateDropdown(parent, text, options, default, callback)
+    options = options or {"Option 1", "Option 2", "Option 3"}
+    default = default or options[1]
     
-    if self.isOpen then
-        self.main.Size = UDim2.new(0, 400, 0, 300)
-    else
-        self.main.Size = UDim2.new(0, 400, 0, 30)
+    local dropdown = CreateInstance("Frame", {
+        Name = "Dropdown",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+        Parent = parent,
+        LayoutOrder = 6
+    })
+    
+    local dropdownButton = CreateInstance("TextButton", {
+        Name = "DropdownButton",
+        BackgroundColor3 = COLORS.SECONDARY_BG,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = FONTS.PRIMARY,
+        Text = "",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = dropdown
+    })
+    
+    -- Add rounded corners to dropdown button
+    AddRoundedCorners(dropdownButton)
+    
+    local dropdownLabel = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 0, 1, 0), -- Will auto adjust based on text
+        Position = UDim2.new(0, 10, 0, 0),
+        Font = FONTS.PRIMARY,
+        Text = text or "Dropdown:",
+        TextColor3 = COLORS.TEXT_SECONDARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        AutomaticSize = Enum.AutomaticSize.X,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = dropdownButton
+    })
+    
+    local selectedOption = CreateInstance("TextLabel", {
+        Name = "SelectedOption",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -60, 1, 0),
+        Position = UDim2.new(0, 10 + dropdownLabel.TextBounds.X + 10, 0, 0),
+        Font = FONTS.PRIMARY,
+        Text = default,
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = dropdownButton
+    })
+    
+    local arrowIcon = CreateInstance("ImageLabel", {
+        Name = "Arrow",
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://7072706663", -- Down arrow icon
+        ImageColor3 = COLORS.TEXT_PRIMARY,
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -30, 0.5, -10),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = dropdownButton
+    })
+    
+    local optionsFrame = CreateInstance("Frame", {
+        Name = "Options",
+        BackgroundColor3 = COLORS.SECONDARY_BG,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 1, 5),
+        Size = UDim2.new(1, 0, 0, #options * 30),
+        Visible = false,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 10) or 15,
+        Parent = dropdown
+    })
+    
+    -- Add rounded corners to options frame
+    AddRoundedCorners(optionsFrame)
+    
+    -- Add shadow to options frame
+    AddShadow(optionsFrame, 0.5, UDim2.new(1, 8, 1, 8), -1)
+    
+    -- Create option buttons
+    local selected = default
+    
+    for i, option in ipairs(options) do
+        local optionButton = CreateInstance("TextButton", {
+            Name = "Option_" .. option,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 30),
+            Position = UDim2.new(0, 0, 0, (i-1) * 30),
+            Font = FONTS.PRIMARY,
+            Text = option,
+            TextColor3 = option == selected and COLORS.ACCENT or COLORS.TEXT_PRIMARY,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 11) or 16,
+            Parent = optionsFrame
+        })
+        
+        -- Add padding to option button
+        AddPadding(optionButton, SIZING.PADDING.SMALL)
+        
+        -- Option button hover and click effects
+        optionButton.MouseEnter:Connect(function()
+            if option ~= selected then
+                TweenService:Create(optionButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.9, BackgroundColor3 = COLORS.ACCENT}):Play()
+            end
+        end)
+        
+        optionButton.MouseLeave:Connect(function()
+            if option ~= selected then
+                TweenService:Create(optionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+            end
+        end)
+        
+        optionButton.MouseButton1Click:Connect(function()
+            selected = option
+            selectedOption.Text = option
+            
+            -- Update option colors
+            for _, button in pairs(optionsFrame:GetChildren()) do
+                if button:IsA("TextButton") then
+                    button.TextColor3 = button.Text == selected and COLORS.ACCENT or COLORS.TEXT_PRIMARY
+                end
+            end
+            
+            -- Hide options
+            optionsFrame.Visible = false
+            arrowIcon.Rotation = 0
+            
+            if callback then
+                callback(selected)
+            end
+        end)
+    end
+    
+    -- Open/close dropdown on click
+    local open = false
+    dropdownButton.MouseButton1Click:Connect(function()
+        open = not open
+        optionsFrame.Visible = open
+        TweenService:Create(arrowIcon, TweenInfo.new(0.2), {Rotation = open and 180 or 0}):Play()
+    end)
+    
+    -- Close dropdown when clicking elsewhere
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            local position = UserInputService:GetMouseLocation()
+            local objects = Players.LocalPlayer:GetGuiObjectsAtPosition(position.X, position.Y)
+            
+            local isClickingDropdown = false
+            for _, obj in pairs(objects) do
+                if obj:IsDescendantOf(dropdown) then
+                    isClickingDropdown = true
+                    break
+                end
+            end
+            
+            if not isClickingDropdown and open then
+                open = false
+                optionsFrame.Visible = false
+                TweenService:Create(arrowIcon, TweenInfo.new(0.2), {Rotation = 0}):Play()
+            end
+        end
+    end)
+    
+    return {
+        Frame = dropdown,
+        GetSelected = function() return selected end,
+        SetSelected = function(option)
+            if table.find(options, option) then
+                selected = option
+                selectedOption.Text = option
+                
+                -- Update option colors
+                for _, button in pairs(optionsFrame:GetChildren()) do
+                    if button:IsA("TextButton") then
+                        button.TextColor3 = button.Text == selected and COLORS.ACCENT or COLORS.TEXT_PRIMARY
+                    end
+                end
+                
+                if callback then
+                    callback(selected)
+                end
+            end
+        end,
+        SetOptions = function(newOptions)
+            options = newOptions or {"Option 1", "Option 2", "Option 3"}
+            
+            -- Clear existing options
+            for _, child in pairs(optionsFrame:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child:Destroy()
+                end
+            end
+            
+            -- Update frame size
+            optionsFrame.Size = UDim2.new(1, 0, 0, #options * 30)
+            
+            -- Default to first option if current selection is no longer valid
+            if not table.find(options, selected) then
+                selected = options[1]
+                selectedOption.Text = selected
+            end
+            
+            -- Create new option buttons
+            for i, option in ipairs(options) do
+                local optionButton = CreateInstance("TextButton", {
+                    Name = "Option_" .. option,
+                    BackgroundTransparency = 1,
+                    Size = UDim2.new(1, 0, 0, 30),
+                    Position = UDim2.new(0, 0, 0, (i-1) * 30),
+                    Font = FONTS.PRIMARY,
+                    Text = option,
+                    TextColor3 = option == selected and COLORS.ACCENT or COLORS.TEXT_PRIMARY,
+                    TextSize = SIZING.TEXT_SIZE.REGULAR,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = parent.ZIndex and (parent.ZIndex + 11) or 16,
+                    Parent = optionsFrame
+                })
+                
+                -- Add padding to option button
+                AddPadding(optionButton, SIZING.PADDING.SMALL)
+                
+                -- Option button hover and click effects
+                optionButton.MouseEnter:Connect(function()
+                    if option ~= selected then
+                        TweenService:Create(optionButton, TweenInfo.new(0.2), {BackgroundTransparency = 0.9, BackgroundColor3 = COLORS.ACCENT}):Play()
+                    end
+                end)
+                
+                optionButton.MouseLeave:Connect(function()
+                    if option ~= selected then
+                        TweenService:Create(optionButton, TweenInfo.new(0.2), {BackgroundTransparency = 1}):Play()
+                    end
+                end)
+                
+                optionButton.MouseButton1Click:Connect(function()
+                    selected = option
+                    selectedOption.Text = option
+                    
+                    -- Update option colors
+                    for _, button in pairs(optionsFrame:GetChildren()) do
+                        if button:IsA("TextButton") then
+                            button.TextColor3 = button.Text == selected and COLORS.ACCENT or COLORS.TEXT_PRIMARY
+                        end
+                    end
+                    
+                    -- Hide options
+                    optionsFrame.Visible = false
+                    arrowIcon.Rotation = 0
+                    
+                    if callback then
+                        callback(selected)
+                    end
+                end)
+            end
+        end
+    }
+end
+
+-- Create a ColorPicker
+function SleekUI:CreateColorPicker(parent, text, defaultColor, callback)
+    defaultColor = defaultColor or Color3.fromRGB(255, 255, 255)
+    
+    local colorPicker = CreateInstance("Frame", {
+        Name = "ColorPicker",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+        Parent = parent,
+        LayoutOrder = 7
+    })
+    
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -60, 1, 0),
+        Font = FONTS.PRIMARY,
+        Text = text or "Color",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = colorPicker
+    })
+    
+    local colorDisplay = CreateInstance("TextButton", {
+        Name = "ColorDisplay",
+        BackgroundColor3 = defaultColor,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -50, 0.5, -15),
+        Size = UDim2.new(0, 46, 0, 30),
+        Text = "",
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = colorPicker
+    })
+    
+    -- Add rounded corners to color display
+    AddRoundedCorners(colorDisplay, UDim.new(0, 6))
+    
+    -- Create color picker UI (hidden by default)
+    local pickerFrame = CreateInstance("Frame", {
+        Name = "PickerFrame",
+        BackgroundColor3 = COLORS.BACKGROUND,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -220, 1, 10),
+        Size = UDim2.new(0, 200, 0, 240),
+        Visible = false,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 10) or 15,
+        Parent = colorPicker
+    })
+    
+    -- Add rounded corners to picker frame
+    AddRoundedCorners(pickerFrame)
+    
+    -- Add shadow to picker frame
+    AddShadow(pickerFrame, 0.5, UDim2.new(1, 8, 1, 8), -1)
+    
+    -- Create color picker components
+    -- (Simplified implementation - would normally include HSV color picker)
+    local colorPreview = CreateInstance("Frame", {
+        Name = "ColorPreview",
+        BackgroundColor3 = defaultColor,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 10, 0, 10),
+        Size = UDim2.new(1, -20, 0, 40),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 11) or 16,
+        Parent = pickerFrame
+    })
+    
+    -- Add rounded corners to color preview
+    AddRoundedCorners(colorPreview, UDim.new(0, 6))
+    
+    -- Create RGB sliders
+    local rgbContainer = CreateInstance("Frame", {
+        Name = "RGBContainer",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 60),
+        Size = UDim2.new(1, -20, 0, 120),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 11) or 16,
+        Parent = pickerFrame
+    })
+    
+    local function createColorSlider(name, color, value, yPos)
+        local sliderContainer = CreateInstance("Frame", {
+            Name = name .. "Slider",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(0, 0, 0, yPos),
+            Size = UDim2.new(1, 0, 0, 30),
+            ZIndex = parent.ZIndex and (parent.ZIndex + 12) or 17,
+            Parent = rgbContainer
+        })
+        
+        local sliderLabel = CreateInstance("TextLabel", {
+            Name = "Label",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 20, 1, 0),
+            Font = FONTS.PRIMARY,
+            Text = name,
+            TextColor3 = color,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 13) or 18,
+            Parent = sliderContainer
+        })
+        
+        local sliderTrack = CreateInstance("Frame", {
+            Name = "Track",
+            BackgroundColor3 = Color3.fromRGB(60, 60, 65),
+            BorderSizePixel = 0,
+            Position = UDim2.new(0, 25, 0.5, -3),
+            Size = UDim2.new(1, -55, 0, 6),
+            ZIndex = parent.ZIndex and (parent.ZIndex + 13) or 18,
+            Parent = sliderContainer
+        })
+        
+        -- Add rounded corners to track
+        AddRoundedCorners(sliderTrack, UDim.new(0, 3))
+        
+        local sliderFill = CreateInstance("Frame", {
+            Name = "Fill",
+            BackgroundColor3 = color,
+            BorderSizePixel = 0,
+            Size = UDim2.new(value/255, 0, 1, 0),
+            ZIndex = parent.ZIndex and (parent.ZIndex + 14) or 19,
+            Parent = sliderTrack
+        })
+        
+        -- Add rounded corners to fill
+        AddRoundedCorners(sliderFill, UDim.new(0, 3))
+        
+        local sliderButton = CreateInstance("Frame", {
+            Name = "Button",
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BorderSizePixel = 0,
+            Position = UDim2.new(value/255, 0, 0.5, 0),
+            Size = UDim2.new(0, 14, 0, 14),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            ZIndex = parent.ZIndex and (parent.ZIndex + 15) or 20,
+            Parent = sliderTrack
+        })
+        
+        -- Add rounded corners to button
+        AddRoundedCorners(sliderButton, UDim.new(1, 0))
+        
+        -- Add shadow to button
+        AddShadow(sliderButton, 0.4, UDim2.new(1, 4, 1, 4), -1)
+        
+        local valueLabel = CreateInstance("TextLabel", {
+            Name = "Value",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 30, 1, 0),
+            Position = UDim2.new(1, -30, 0, 0),
+            Font = FONTS.PRIMARY,
+            Text = tostring(math.floor(value)),
+            TextColor3 = COLORS.TEXT_PRIMARY,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 13) or 18,
+            Parent = sliderContainer
+        })
+        
+        -- Slider functionality
+        local sliderDragging = false
+        
+        local function updateColorSlider(input)
+            local xPos = math.clamp(
+                (input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X,
+                0,
+                1
+            )
+            
+            -- Update slider visuals
+            sliderFill.Size = UDim2.new(xPos, 0, 1, 0)
+            sliderButton.Position = UDim2.new(xPos, 0, 0.5, 0)
+            
+            -- Update value
+            local newValue = math.floor(xPos * 255)
+            valueLabel.Text = tostring(newValue)
+            
+            return newValue
+        end
+        
+        sliderTrack.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                sliderDragging = true
+                return updateColorSlider(input)
+            end
+        end)
+        
+        sliderButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                sliderDragging = true
+            end
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                sliderDragging = false
+            end
+        end)
+        
+        return {
+            Dragging = function() return sliderDragging end,
+            Update = updateColorSlider,
+            SetValue = function(newValue)
+                local xPos = math.clamp(newValue / 255, 0, 1)
+                sliderFill.Size = UDim2.new(xPos, 0, 1, 0)
+                sliderButton.Position = UDim2.new(xPos, 0, 0.5, 0)
+                valueLabel.Text = tostring(math.floor(newValue))
+            end,
+            GetValue = function()
+                return tonumber(valueLabel.Text)
+            end
+        }
+    end
+    
+    local rSlider = createColorSlider("R", Color3.fromRGB(255, 100, 100), defaultColor.R * 255, 0)
+    local gSlider = createColorSlider("G", Color3.fromRGB(100, 255, 100), defaultColor.G * 255, 40)
+    local bSlider = createColorSlider("B", Color3.fromRGB(100, 100, 255), defaultColor.B * 255, 80)
+    
+    -- Apply button
+    local applyButton = CreateInstance("TextButton", {
+        Name = "Apply",
+        BackgroundColor3 = COLORS.ACCENT,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 10, 1, -50),
+        Size = UDim2.new(1, -20, 0, 36),
+        Font = FONTS.PRIMARY,
+        Text = "Apply",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 11) or 16,
+        Parent = pickerFrame
+    })
+    
+    -- Add rounded corners to apply button
+    AddRoundedCorners(applyButton)
+    
+    -- Add hover and click effects to apply button
+    applyButton.MouseEnter:Connect(function()
+        TweenService:Create(applyButton, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.ACCENT_DARK}):Play()
+    end)
+    
+    applyButton.MouseLeave:Connect(function()
+        TweenService:Create(applyButton, TweenInfo.new(0.2), {BackgroundColor3 = COLORS.ACCENT}):Play()
+    end)
+    
+    -- Current color value
+    local currentColor = defaultColor
+    
+    -- Update preview color
+    local function updateColor()
+        local r = rSlider.GetValue() / 255
+        local g = gSlider.GetValue() / 255
+        local b = bSlider.GetValue() / 255
+        
+        currentColor = Color3.new(r, g, b)
+        colorPreview.BackgroundColor3 = currentColor
+    end
+    
+    -- Update color on slider input
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement then
+            local needsUpdate = false
+            
+            if rSlider.Dragging() then
+                rSlider.Update(input)
+                needsUpdate = true
+            elseif gSlider.Dragging() then
+                gSlider.Update(input)
+                needsUpdate = true
+            elseif bSlider.Dragging() then
+                bSlider.Update(input)
+                needsUpdate = true
+            end
+            
+            if needsUpdate then
+                updateColor()
+            end
+        end
+    end)
+    
+    -- Show/hide picker on color display click
+    local pickerVisible = false
+    colorDisplay.MouseButton1Click:Connect(function()
+        pickerVisible = not pickerVisible
+        pickerFrame.Visible = pickerVisible
+    end)
+    
+    -- Apply button click
+    applyButton.MouseButton1Click:Connect(function()
+        colorDisplay.BackgroundColor3 = currentColor
+        pickerVisible = false
+        pickerFrame.Visible = false
+        
+        if callback then
+            callback(currentColor)
+        end
+    end)
+    
+    -- Close picker when clicking elsewhere
+    UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 and pickerVisible then
+            local position = UserInputService:GetMouseLocation()
+            local objects = Players.LocalPlayer:GetGuiObjectsAtPosition(position.X, position.Y)
+            
+            local isClickingPicker = false
+            for _, obj in pairs(objects) do
+                if obj:IsDescendantOf(colorPicker) then
+                    isClickingPicker = true
+                    break
+                end
+            end
+            
+            if not isClickingPicker then
+                pickerVisible = false
+                pickerFrame.Visible = false
+            end
+        end
+    end)
+    
+    return {
+        Frame = colorPicker,
+        Display = colorDisplay,
+        GetColor = function() return colorDisplay.BackgroundColor3 end,
+        SetColor = function(color)
+            colorDisplay.BackgroundColor3 = color
+            currentColor = color
+            colorPreview.BackgroundColor3 = color
+            
+            -- Update sliders
+            rSlider.SetValue(math.floor(color.R * 255))
+            gSlider.SetValue(math.floor(color.G * 255))
+            bSlider.SetValue(math.floor(color.B * 255))
+            
+            if callback then
+                callback(color)
+            end
+        end
+    }
+end
+
+-- Create a Notification
+function SleekUI:CreateNotification(parent, title, message, type, duration)
+    parent = parent or Players.LocalPlayer:WaitForChild("PlayerGui")
+    type = type or "info" -- info, success, warning, error
+    duration = duration or 3 -- seconds
+    
+    -- Determine notification color based on type
+    local typeColors = {
+        info = COLORS.ACCENT,
+        success = COLORS.SUCCESS,
+        warning = COLORS.WARNING,
+        error = COLORS.ERROR
+    }
+    
+    local typeColor = typeColors[string.lower(type)] or COLORS.ACCENT
+    
+    -- Create notification container if it doesn't exist
+    local notificationContainer = parent:FindFirstChild("SleekUINotifications")
+    if not notificationContainer then
+        notificationContainer = CreateInstance("Frame", {
+            Name = "SleekUINotifications",
+            BackgroundTransparency = 1,
+            Position = UDim2.new(1, -320, 0, 20),
+            Size = UDim2.new(0, 300, 1, -40),
+            ZIndex = 100,
+            Parent = parent
+        })
+        
+        -- Add list layout
+        local listLayout = AddListLayout(notificationContainer, 10)
+        listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    end
+    
+    -- Create notification frame
+    local notification = CreateInstance("Frame", {
+        Name = "Notification_" .. title,
+        BackgroundColor3 = COLORS.BACKGROUND,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 0), -- Auto size based on content
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Position = UDim2.new(1, 320, 0, 0),
+        ZIndex = 101,
+        Parent = notificationContainer
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(notification)
+    
+    -- Add shadow
+    AddShadow(notification, 0.5, UDim2.new(1, 8, 1, 8), -1)
+    
+    -- Create colored indicator
+    local indicator = CreateInstance("Frame", {
+        Name = "Indicator",
+        BackgroundColor3 = typeColor,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 4, 1, 0),
+        ZIndex = 102,
+        Parent = notification
+    })
+    
+    -- Add title
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        BackgroundTransparency = 1,
+        Font = FONTS.SECONDARY,
+        Text = title or "Notification",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.MEDIUM,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, -20, 0, 24),
+        Position = UDim2.new(0, 16, 0, 8),
+        ZIndex = 102,
+        Parent = notification
+    })
+    
+    -- Add message
+    local messageLabel = CreateInstance("TextLabel", {
+        -- Continuing with the notification component
+        Name = "Message",
+        BackgroundTransparency = 1,
+        Font = FONTS.PRIMARY,
+        Text = message or "",
+        TextColor3 = COLORS.TEXT_SECONDARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        Size = UDim2.new(1, -20, 0, 0),
+        Position = UDim2.new(0, 16, 0, 32),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 102,
+        Parent = notification
+    })
+    
+    -- Add close button
+    local closeButton = CreateInstance("TextButton", {
+        Name = "Close",
+        BackgroundTransparency = 1,
+        Font = FONTS.TITLE,
+        Text = "×",
+        TextColor3 = COLORS.TEXT_SECONDARY,
+        TextSize = 24,
+        Size = UDim2.new(0, 24, 0, 24),
+        Position = UDim2.new(1, -24, 0, 8),
+        ZIndex = 102,
+        Parent = notification
+    })
+    
+    -- Add padding
+    AddPadding(notification, SIZING.PADDING.REGULAR)
+    
+    -- Fade in animation
+    notification.Position = UDim2.new(1, 320, 0, 0)
+    TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+    
+    -- Close notification function
+    local function closeNotification()
+        -- Fade out animation
+        local fadeTween = TweenService:Create(notification, TweenInfo.new(0.3, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), {Position = UDim2.new(1, 320, 0, 0)})
+        fadeTween:Play()
+        
+        -- Remove after animation completes
+        fadeTween.Completed:Connect(function()
+            notification:Destroy()
+        end)
+    end
+    
+    -- Close button click
+    closeButton.MouseButton1Click:Connect(closeNotification)
+    
+    -- Auto close after duration
+    if duration and duration > 0 then
+        delay(duration, closeNotification)
+    end
+    
+    return {
+        Notification = notification,
+        Close = closeNotification
+    }
+end
+
+-- Create a Tab System
+function SleekUI:CreateTabSystem(parent)
+    local tabSystem = CreateInstance("Frame", {
+        Name = "TabSystem",
+        BackgroundColor3 = COLORS.BACKGROUND,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 2,
+        Parent = parent
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(tabSystem)
+    
+    -- Create tab header
+    local tabHeader = CreateInstance("Frame", {
+        Name = "TabHeader",
+        BackgroundColor3 = COLORS.SECONDARY_BG,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 3,
+        Parent = tabSystem
+    })
+    
+    -- Add top rounded corners only to tab header
+    local cornerRadius = SIZING.CORNER_RADIUS
+    local tabHeaderCorner = CreateInstance("UICorner", {
+        CornerRadius = cornerRadius,
+        Parent = tabHeader
+    })
+    
+    -- Create tab content container
+    local tabContent = CreateInstance("Frame", {
+        Name = "TabContent",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 36),
+        Size = UDim2.new(1, 0, 1, -36),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 3,
+        Parent = tabSystem
+    })
+    
+    -- Add list layout to tab header for buttons
+    local headerList = AddListLayout(tabHeader)
+    headerList.FillDirection = Enum.FillDirection.Horizontal
+    headerList.HorizontalAlignment = Enum.HorizontalAlignment.Left
+    headerList.Padding = UDim.new(0, 2)
+    
+    -- Storage for tabs
+    local tabs = {}
+    local activeTab = nil
+    
+    -- Function to add a new tab
+    local function AddTab(name)
+        -- Create tab button
+        local tabButton = CreateInstance("TextButton", {
+            Name = "Tab_" .. name,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0, 0, 1, 0), -- Width will adjust to text
+            AutomaticSize = Enum.AutomaticSize.X,
+            Font = FONTS.PRIMARY,
+            Text = name,
+            TextColor3 = COLORS.TEXT_SECONDARY,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 4,
+            Parent = tabHeader
+        })
+        
+        -- Add padding to tab button
+        AddPadding(tabButton, UDim.new(0, 14))
+        
+        -- Create content frame for this tab
+        local contentFrame = CreateInstance("ScrollingFrame", {
+            Name = "Content_" .. name,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            ScrollBarThickness = 4,
+            ScrollBarImageColor3 = COLORS.ACCENT,
+            VerticalScrollBarPosition = Enum.VerticalScrollBarPosition.Right,
+            Visible = false,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 4,
+            Parent = tabContent,
+            ClipsDescendants = true,
+            CanvasSize = UDim2.new(0, 0, 0, 0) -- Will auto-update based on content
+        })
+        
+        -- Add padding to content frame
+        AddPadding(contentFrame)
+        
+        -- Add list layout for auto-positioning content
+        local listLayout = AddListLayout(contentFrame)
+        
+        -- Auto-update canvas size
+        listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            contentFrame.CanvasSize = UDim2.new(0, 0, 0, listLayout.AbsoluteContentSize.Y + 20)
+        end)
+        
+        -- Store tab data
+        local tab = {
+            Name = name,
+            Button = tabButton,
+            Content = contentFrame
+        }
+        
+        table.insert(tabs, tab)
+        
+        -- Tab button click
+        tabButton.MouseButton1Click:Connect(function()
+            -- Activate this tab
+            if activeTab ~= tab then
+                if activeTab then
+                    -- Deactivate current tab
+                    activeTab.Content.Visible = false
+                    activeTab.Button.TextColor3 = COLORS.TEXT_SECONDARY
+                    
+                    -- Remove indicator if it exists
+                    local indicator = activeTab.Button:FindFirstChild("Indicator")
+                    if indicator then
+                        indicator:Destroy()
+                    end
+                end
+                
+                -- Activate new tab
+                tab.Content.Visible = true
+                tab.Button.TextColor3 = COLORS.ACCENT
+                
+                -- Add indicator
+                local indicator = CreateInstance("Frame", {
+                    Name = "Indicator",
+                    BackgroundColor3 = COLORS.ACCENT,
+                    BorderSizePixel = 0,
+                    Size = UDim2.new(1, 0, 0, 2),
+                    Position = UDim2.new(0, 0, 1, -2),
+                    ZIndex = tab.Button.ZIndex,
+                    Parent = tab.Button
+                })
+                
+                activeTab = tab
+            end
+        end)
+        
+        -- If this is the first tab, activate it
+        if #tabs == 1 then
+            tabButton.MouseButton1Click:Fire()
+        end
+        
+        return contentFrame
+    end
+    
+    return {
+        TabSystem = tabSystem,
+        AddTab = AddTab,
+        GetActiveTab = function() return activeTab and activeTab.Name or nil end,
+        SetActiveTab = function(name)
+            for _, tab in ipairs(tabs) do
+                if tab.Name == name then
+                    tab.Button.MouseButton1Click:Fire()
+                    return true
+                end
+            end
+            return false
+        end
+    }
+end
+
+-- Create a Progress Bar
+function SleekUI:CreateProgressBar(parent, text, progress, showPercentage)
+    progress = math.clamp(progress or 0, 0, 1)
+    showPercentage = showPercentage ~= nil and showPercentage or true
+    
+    local progressBar = CreateInstance("Frame", {
+        Name = "ProgressBar",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 40),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+        Parent = parent,
+        LayoutOrder = 8
+    })
+    
+    local labelContainer = CreateInstance("Frame", {
+        Name = "LabelContainer",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 0),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+        Parent = progressBar
+    })
+    
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(showPercentage and 0.8 or 1, 0, 1, 0),
+        Font = FONTS.PRIMARY,
+        Text = text or "Progress",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = labelContainer
+    })
+    
+    local percentageLabel
+    if showPercentage then
+        percentageLabel = CreateInstance("TextLabel", {
+            Name = "Percentage",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(0.2, 0, 1, 0),
+            Position = UDim2.new(0.8, 0, 0, 0),
+            Font = FONTS.PRIMARY,
+            Text = math.floor(progress * 100) .. "%",
+            TextColor3 = COLORS.ACCENT,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+            Parent = labelContainer
+        })
+    end
+    
+    local progressTrack = CreateInstance("Frame", {
+        Name = "Track",
+        BackgroundColor3 = Color3.fromRGB(60, 60, 65),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 22),
+        Size = UDim2.new(1, 0, 0, 8),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = progressBar
+    })
+    
+    -- Add rounded corners to track
+    AddRoundedCorners(progressTrack, UDim.new(0, 4))
+    
+    local progressFill = CreateInstance("Frame", {
+        Name = "Fill",
+        BackgroundColor3 = COLORS.ACCENT,
+        BorderSizePixel = 0,
+        Size = UDim2.new(progress, 0, 1, 0),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = progressTrack
+    })
+    
+    -- Add rounded corners to fill
+    AddRoundedCorners(progressFill, UDim.new(0, 4))
+    
+    -- Add glow to fill
+    AddGlow(progressFill, COLORS.ACCENT, 0.85, 5)
+    
+    -- Return progress bar with controls
+    return {
+        Frame = progressBar,
+        GetProgress = function() return progress end,
+        SetProgress = function(value)
+            progress = math.clamp(value, 0, 1)
+            progressFill:TweenSize(
+                UDim2.new(progress, 0, 1, 0),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.3,
+                true
+            )
+            
+            if showPercentage and percentageLabel then
+                percentageLabel.Text = math.floor(progress * 100) .. "%"
+            end
+        end,
+        SetLabel = function(newText)
+            label.Text = newText or "Progress"
+        end,
+        Increment = function(amount)
+            amount = amount or 0.1
+            progress = math.clamp(progress + amount, 0, 1)
+            progressFill:TweenSize(
+                UDim2.new(progress, 0, 1, 0),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.3,
+                true
+            )
+            
+            if showPercentage and percentageLabel then
+                percentageLabel.Text = math.floor(progress * 100) .. "%"
+            end
+        end
+    }
+end
+
+-- Create a Tooltip
+function SleekUI:CreateTooltip(parent, text)
+    -- Create tooltip frame that follows the mouse
+    local tooltip = CreateInstance("Frame", {
+        Name = "Tooltip",
+        BackgroundColor3 = COLORS.BACKGROUND,
+        BorderSizePixel = 0,
+        Size = UDim2.new(0, 200, 0, 0), -- Auto size based on text
+        AutomaticSize = Enum.AutomaticSize.Y,
+        Visible = false,
+        ZIndex = 100,
+        Parent = parent:FindFirstAncestorOfClass("ScreenGui") or Players.LocalPlayer:WaitForChild("PlayerGui")
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(tooltip)
+    
+    -- Add shadow
+    AddShadow(tooltip, 0.5, UDim2.new(1, 8, 1, 8), -1)
+    
+    -- Add text
+    local tooltipText = CreateInstance("TextLabel", {
+        Name = "Text",
+        BackgroundTransparency = 1,
+        Font = FONTS.PRIMARY,
+        Text = text or "Tooltip",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.REGULAR,
+        TextWrapped = true,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 101,
+        Parent = tooltip
+    })
+    
+    -- Add padding
+    AddPadding(tooltip, SIZING.PADDING.REGULAR)
+    
+    -- Show tooltip
+    local function showTooltip()
+        tooltip.Visible = true
+    end
+    
+    -- Hide tooltip
+    local function hideTooltip()
+        tooltip.Visible = false
+    end
+    
+    -- Update tooltip position
+    local function updatePosition(x, y)
+        -- Position tooltip near cursor but ensure it stays on screen
+        local screenSize = tooltip.Parent.AbsoluteSize
+        local tooltipSize = tooltip.AbsoluteSize
+        
+        local posX = math.clamp(x + 20, 0, screenSize.X - tooltipSize.X)
+        local posY = math.clamp(y + 20, 0, screenSize.Y - tooltipSize.Y)
+        
+        tooltip.Position = UDim2.new(0, posX, 0, posY)
+    end
+    
+    -- Update tooltip on mouse move
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement and tooltip.Visible then
+            updatePosition(input.Position.X, input.Position.Y)
+        end
+    end)
+    
+    -- Connect hover events to parent if it's a GuiObject
+    if parent:IsA("GuiObject") then
+        parent.MouseEnter:Connect(function()
+            showTooltip()
+            local mousePos = UserInputService:GetMouseLocation()
+            updatePosition(mousePos.X, mousePos.Y)
+        end)
+        
+        parent.MouseLeave:Connect(hideTooltip)
+    end
+    
+    return {
+        Tooltip = tooltip,
+        SetText = function(newText)
+            tooltipText.Text = newText or "Tooltip"
+        end,
+        Show = function()
+            showTooltip()
+            local mousePos = UserInputService:GetMouseLocation()
+            updatePosition(mousePos.X, mousePos.Y)
+        end,
+        Hide = hideTooltip,
+        AttachTo = function(object)
+            if object:IsA("GuiObject") then
+                object.MouseEnter:Connect(function()
+                    showTooltip()
+                    local mousePos = UserInputService:GetMouseLocation()
+                    updatePosition(mousePos.X, mousePos.Y)
+                end)
+                
+                object.MouseLeave:Connect(hideTooltip)
+            end
+        end
+    }
+end
+
+-- Create a Modal Dialog
+function SleekUI:CreateModal(parent, title, message, buttons)
+    parent = parent or Players.LocalPlayer:WaitForChild("PlayerGui")
+    buttons = buttons or {
+        {
+            Text = "OK",
+            Callback = function() end,
+            Type = "Primary" -- Primary, Secondary, Danger
+        }
+    }
+    
+    -- Create darkened background overlay
+    local overlay = CreateInstance("Frame", {
+        Name = "ModalOverlay",
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.5,
+        Size = UDim2.new(1, 0, 1, 0),
+        ZIndex = 1000,
+        Parent = parent
+    })
+    
+    -- Create modal frame
+    local modal = CreateInstance("Frame", {
+        Name = "Modal",
+        BackgroundColor3 = COLORS.BACKGROUND,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(0, 400, 0, 0), -- Will auto-size based on content
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 1001,
+        Parent = overlay
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(modal)
+    
+    -- Add shadow
+    AddShadow(modal, 0.4, UDim2.new(1, 20, 1, 20), -1)
+    
+    -- Create title
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        BackgroundTransparency = 1,
+        Font = FONTS.TITLE,
+        Text = title or "Dialog",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.TITLE,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Size = UDim2.new(1, 0, 0, 40),
+        Position = UDim2.new(0, 0, 0, 10),
+        ZIndex = 1002,
+        Parent = modal
+    })
+    
+    -- Create message
+    local messageLabel = CreateInstance("TextLabel", {
+        Name = "Message",
+        BackgroundTransparency = 1,
+        Font = FONTS.PRIMARY,
+        Text = message or "",
+        TextColor3 = COLORS.TEXT_SECONDARY,
+        TextSize = SIZING.TEXT_SIZE.MEDIUM,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        Size = UDim2.new(1, -40, 0, 0),
+        Position = UDim2.new(0, 20, 0, 60),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 1002,
+        Parent = modal
+    })
+    
+    -- Create button container
+    local buttonContainer = CreateInstance("Frame", {
+        Name = "ButtonContainer",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -40, 0, 40),
+        Position = UDim2.new(0, 20, 0, messageLabel.Position.Y.Offset + messageLabel.TextBounds.Y + 30),
+        ZIndex = 1002,
+        Parent = modal
+    })
+    
+    -- Add list layout for buttons
+    local listLayout = AddListLayout(buttonContainer)
+    listLayout.FillDirection = Enum.FillDirection.Horizontal
+    listLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    listLayout.Padding = UDim.new(0, 20)
+    
+    -- Close modal function
+    local function closeModal()
+        overlay:Destroy()
+    end
+    
+    -- Create buttons
+    for i, btn in ipairs(buttons) do
+        local btnColor
+        if btn.Type == "Primary" then
+            btnColor = COLORS.ACCENT
+        elseif btn.Type == "Danger" then
+            btnColor = COLORS.ERROR
+        else -- Secondary or default
+            btnColor = Color3.fromRGB(80, 80, 85)
+        end
+        
+        local button = CreateInstance("TextButton", {
+            Name = "Button_" .. (btn.Text or "Button"),
+            BackgroundColor3 = btnColor,
+            BorderSizePixel = 0,
+            Size = UDim2.new(0, 120, 0, 36),
+            Font = FONTS.PRIMARY,
+            Text = btn.Text or "Button",
+            TextColor3 = COLORS.TEXT_PRIMARY,
+            TextSize = SIZING.TEXT_SIZE.REGULAR,
+            ZIndex = 1003,
+            Parent = buttonContainer,
+            LayoutOrder = i
+        })
+        
+        -- Add rounded corners
+        AddRoundedCorners(button)
+        
+        -- Add hover and click effects
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(
+                math.max(btnColor.R * 255 - 20, 0) / 255,
+                math.max(btnColor.G * 255 - 20, 0) / 255,
+                math.max(btnColor.B * 255 - 20, 0) / 255
+            )}):Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = btnColor}):Play()
+        end)
+        
+        button.MouseButton1Down:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(0, 116, 0, 34)}):Play()
+            TweenService:Create(button, TweenInfo.new(0.1), {Position = UDim2.new(0, 2, 0, 1)}):Play()
+        end)
+        
+        button.MouseButton1Up:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(0, 120, 0, 36)}):Play()
+            TweenService:Create(button, TweenInfo.new(0.1), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+            
+            if btn.Callback then
+                btn.Callback()
+            end
+            
+            closeModal()
+        end)
+    end
+    
+    -- Adjust modal position and make it appear with animation
+    modal.Size = UDim2.new(0, 400, 0, buttonContainer.Position.Y.Offset + buttonContainer.Size.Y.Offset + 20)
+    modal.Position = UDim2.new(0.5, 0, 0.5, -100)
+    modal.BackgroundTransparency = 1
+    overlay.BackgroundTransparency = 1
+    
+    TweenService:Create(overlay, TweenInfo.new(0.3), {BackgroundTransparency = 0.5}):Play()
+    TweenService:Create(modal, TweenInfo.new(0.3), {
+        BackgroundTransparency = 0,
+        Position = UDim2.new(0.5, 0, 0.5, 0)
+    }):Play()
+    
+    return {
+        Modal = modal,
+        Overlay = overlay,
+        Close = closeModal
+    }
+end
+
+-- Create an Accordion section
+function SleekUI:CreateAccordion(parent, title, defaultOpen)
+    defaultOpen = defaultOpen ~= nil and defaultOpen or false
+    
+    local accordion = CreateInstance("Frame", {
+        Name = "Accordion_" .. (title or "Section"),
+        BackgroundColor3 = COLORS.SECONDARY_BG,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 1) or 5,
+        Parent = parent,
+        ClipsDescendants = true,
+        LayoutOrder = 9
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(accordion)
+    
+    -- Create header
+    local header = CreateInstance("TextButton", {
+        Name = "Header",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        Font = FONTS.SECONDARY,
+        Text = "",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.MEDIUM,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = accordion
+    })
+    
+    -- Add title text to header
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -30, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        Font = FONTS.SECONDARY,
+        Text = title or "Accordion",
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = SIZING.TEXT_SIZE.MEDIUM,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = header
+    })
+    
+    -- Add toggle icon
+    local toggleIcon = CreateInstance("TextLabel", {
+        Name = "ToggleIcon",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 20, 0, 20),
+        Position = UDim2.new(1, -25, 0.5, -10),
+        Font = FONTS.TITLE,
+        Text = defaultOpen and "−" or "+", -- Minus or plus sign
+        TextColor3 = COLORS.TEXT_PRIMARY,
+        TextSize = 20,
+        ZIndex = parent.ZIndex and (parent.ZIndex + 3) or 7,
+        Parent = header
+    })
+    
+    -- Create content container
+    local content = CreateInstance("Frame", {
+        Name = "Content",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 36),
+        Size = UDim2.new(1, 0, 0, 0),
+        ZIndex = parent.ZIndex and (parent.ZIndex + 2) or 6,
+        Parent = accordion,
+        AutomaticSize = Enum.AutomaticSize.Y
+    })
+    
+    -- Add padding to content
+    AddPadding(content)
+    
+    -- Add list layout for auto-positioning content
+    local listLayout = AddListLayout(content)
+    
+    -- Set initial state
+    local open = defaultOpen
+    
+    -- Update accordion size based on content
+    local function updateSize()
+        if open then
+            accordion.Size = UDim2.new(1, 0, 0, 36 + content.AbsoluteSize.Y)
+        else
+            accordion.Size = UDim2.new(1, 0, 0, 36)
+        end
+    end
+    
+    -- Update size when content changes
+    listLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        if open then
+            updateSize()
+        end
+    end)
+    
+    -- Toggle accordion
+    local function toggleAccordion()
+        open = not open
+        toggleIcon.Text = open and "−" or "+"
+        
+        if open then
+            updateSize()
+        else
+            accordion:TweenSize(
+                UDim2.new(1, 0, 0, 36),
+                Enum.EasingDirection.Out,
+                Enum.EasingStyle.Quad,
+                0.3,
+                true
+            )
+        end
+    end
+    
+    -- Set initial state
+    if defaultOpen then
+        updateSize()
+    end
+    
+    -- Header click
+    header.MouseButton1Click:Connect(toggleAccordion)
+    
+    return {
+        Accordion = accordion,
+        Content = content,
+        IsOpen = function() return open end,
+        Open = function()
+            if not open then
+                toggleAccordion()
+            end
+        end,
+        Close = function()
+            if open then
+                toggleAccordion()
+            end
+        end,
+        Toggle = toggleAccordion
+    }
+end
+
+-- Apply theme
+function SleekUI:ApplyTheme(theme)
+    if not theme then return end
+    
+    -- Update colors
+    if theme.COLORS then
+        for key, value in pairs(theme.COLORS) do
+            COLORS[key] = value
+        end
+    end
+    
+    -- Update fonts
+    if theme.FONTS then
+        for key, value in pairs(theme.FONTS) do
+            FONTS[key] = value
+        end
+    end
+    
+    -- Update sizing
+    if theme.SIZING then
+        for key, value in pairs(theme.SIZING) do
+            if type(value) == "table" then
+                for subKey, subValue in pairs(value) do
+                    SIZING[key][subKey] = subValue
+                end
+            else
+                SIZING[key] = value
+            end
+        end
     end
 end
 
--- Destroy the UI
-function MiniExploitUI:Destroy()
-    self.screenGui:Destroy()
+-- Get theme
+function SleekUI:GetTheme()
+    return {
+        COLORS = COLORS,
+        FONTS = FONTS,
+        SIZING = SIZING
+    }
 end
 
-return MiniExploitUI
+-- Return the library
+return SleekUI
