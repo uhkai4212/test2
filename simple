@@ -1,104 +1,104 @@
--- ShadowUI Library
--- A compact, mobile-friendly UI library for Roblox exploits
--- Features: Window, Buttons, Toggles, Sliders, Inputs, and Hide functionality
+-- FusionUI Library
+-- A lightweight, feature-rich UI library for Roblox
+-- Features: Rounded corners, modern font, draggable windows, 
+-- proper sizing, shadows, glow effects, and padding
 
-local ShadowUI = {}
+local FusionUI = {}
+FusionUI.__index = FusionUI
+
+-- Constants
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Mouse = LocalPlayer:GetMouse()
-local ScreenGui = Instance.new("ScreenGui")
+local RunService = game:GetService("RunService")
 
--- Configuration
-ShadowUI.Config = {
-    Theme = {
-        Background = Color3.fromRGB(30, 30, 35),
-        Accent = Color3.fromRGB(90, 100, 240),
-        Text = Color3.fromRGB(255, 255, 255),
-        Border = Color3.fromRGB(60, 60, 65),
-        ElementBg = Color3.fromRGB(40, 40, 45),
-        ElementHover = Color3.fromRGB(50, 50, 55),
-        Success = Color3.fromRGB(80, 200, 120),
-        Error = Color3.fromRGB(220, 80, 80)
-    },
-    Animation = {
-        Duration = 0.2,
-        EasingStyle = Enum.EasingStyle.Quad
-    }
-}
+local DEFAULT_FONT = Enum.Font.GothamMedium
+local DEFAULT_TEXT_SIZE = 14
+local DEFAULT_CORNER_RADIUS = UDim.new(0, 8)
+local DEFAULT_PADDING = UDim.new(0, 10)
+local DEFAULT_SHADOW_TRANSPARENCY = 0.5
+local DEFAULT_SHADOW_SIZE = UDim2.new(1, 6, 1, 6)
+local DEFAULT_ACCENT_COLOR = Color3.fromRGB(66, 134, 244)
+local DEFAULT_GLOW_TRANSPARENCY = 0.7
+local DEFAULT_GLOW_SIZE = 15
 
--- Initialize GUI
-ScreenGui.Name = "ShadowUI"
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.ResetOnSpawn = false
-ScreenGui.DisplayOrder = 999999999
-
--- Try different methods to protect the GUI
-if syn and syn.protect_gui then
-    syn.protect_gui(ScreenGui)
-    ScreenGui.Parent = game:GetService("CoreGui")
-elseif gethui then
-    ScreenGui.Parent = gethui()
-elseif KRNL_LOADED and request then
-    ScreenGui.Parent = game.CoreGui
-else
-    ScreenGui.Parent = game.CoreGui:FindFirstChild("RobloxGui") or LocalPlayer:WaitForChild("PlayerGui")
+-- Helper Functions
+local function CreateInstance(className, properties)
+    local instance = Instance.new(className)
+    for k, v in pairs(properties) do
+        instance[k] = v
+    end
+    return instance
 end
 
--- Utility Functions
-local function CreateShadow(frame)
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "Shadow"
-    shadow.AnchorPoint = Vector2.new(0.5, 0.5)
-    shadow.BackgroundTransparency = 1
-    shadow.Position = UDim2.new(0.5, 0, 0.5, 0)
-    shadow.Size = UDim2.new(1, 40, 1, 40)
-    shadow.Image = "rbxassetid://6014261993"
-    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.ImageTransparency = 0.5
-    shadow.ScaleType = Enum.ScaleType.Slice
-    shadow.SliceCenter = Rect.new(49, 49, 450, 450)
-    shadow.ZIndex = frame.ZIndex - 1
-    shadow.Parent = frame
+local function AddRoundedCorners(frame, radius)
+    local corner = CreateInstance("UICorner", {
+        CornerRadius = radius or DEFAULT_CORNER_RADIUS,
+        Parent = frame
+    })
+    return corner
+end
+
+local function AddPadding(frame, padding)
+    local uiPadding = CreateInstance("UIPadding", {
+        PaddingTop = padding or DEFAULT_PADDING,
+        PaddingBottom = padding or DEFAULT_PADDING,
+        PaddingLeft = padding or DEFAULT_PADDING,
+        PaddingRight = padding or DEFAULT_PADDING,
+        Parent = frame
+    })
+    return uiPadding
+end
+
+local function AddShadow(frame, transparency, size)
+    local shadow = CreateInstance("ImageLabel", {
+        Name = "Shadow",
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://1316045217", -- Shadow asset
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ImageTransparency = transparency or DEFAULT_SHADOW_TRANSPARENCY,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = size or DEFAULT_SHADOW_SIZE,
+        ZIndex = frame.ZIndex - 1,
+        Parent = frame
+    })
     return shadow
 end
 
-local function CreateGlow(frame)
-    local glow = Instance.new("ImageLabel")
-    glow.Name = "Glow"
-    glow.AnchorPoint = Vector2.new(0.5, 0.5)
-    glow.BackgroundTransparency = 1
-    glow.Position = UDim2.new(0.5, 0, 0.5, 0)
-    glow.Size = UDim2.new(1, 30, 1, 30)
-    glow.Image = "rbxassetid://5028857084"
-    glow.ImageColor3 = ShadowUI.Config.Theme.Accent
-    glow.ImageTransparency = 0.8
-    glow.ZIndex = frame.ZIndex - 1
-    glow.Parent = frame
+local function AddGlow(frame, color, transparency, size)
+    local glow = CreateInstance("ImageLabel", {
+        Name = "Glow",
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://151205964", -- Glow asset
+        ImageColor3 = color or DEFAULT_ACCENT_COLOR,
+        ImageTransparency = transparency or DEFAULT_GLOW_TRANSPARENCY,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Size = UDim2.new(1, size or DEFAULT_GLOW_SIZE, 1, size or DEFAULT_GLOW_SIZE),
+        ZIndex = frame.ZIndex - 1,
+        Parent = frame
+    })
     return glow
 end
 
-local function Tween(obj, props, duration)
-    local tween = TweenService:Create(
-        obj,
-        TweenInfo.new(duration or ShadowUI.Config.Animation.Duration, ShadowUI.Config.Animation.EasingStyle),
-        props
-    )
-    tween:Play()
-    return tween
-end
-
-local function MakeDraggable(frame)
+local function MakeDraggable(frame, dragHandle)
+    local dragInput, dragStart, startPos
     local dragging = false
-    local dragStart, startPos
     
-    local function UpdateDrag(input)
+    local function UpdatePosition(input)
         local delta = input.Position - dragStart
-        frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        frame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
     end
     
-    frame.InputBegan:Connect(function(input)
+    dragHandle = dragHandle or frame
+    
+    dragHandle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
@@ -112,914 +112,454 @@ local function MakeDraggable(frame)
         end
     end)
     
-    frame.InputChanged:Connect(function(input)
-        if (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) and dragging then
-            UpdateDrag(input)
+    dragHandle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input == dragInput) then
+            UpdatePosition(input)
         end
     end)
 end
 
--- Window Creator
-function ShadowUI:CreateWindow(title, size)
-    local window = {}
-    size = size or UDim2.new(0, 550, 0, 300) -- Wider than tall by default
+-- Create ScreenGui
+function FusionUI:CreateScreenGui(name)
+    local screenGui = CreateInstance("ScreenGui", {
+        Name = name or "FusionUI",
+        Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui"),
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    })
     
-    -- Create main frame
-    local frame = Instance.new("Frame")
-    frame.Name = "Window"
-    frame.Size = size
-    frame.Position = UDim2.new(0.5, -size.X.Offset / 2, 0.5, -size.Y.Offset / 2)
-    frame.BackgroundColor3 = ShadowUI.Config.Theme.Background
-    frame.BorderSizePixel = 0
-    frame.ClipsDescendants = true
-    frame.ZIndex = 10
-    frame.Parent = ScreenGui
+    return screenGui
+end
+
+-- Create a Window
+function FusionUI:CreateWindow(parent, title, size, position)
+    local windowSize = size or UDim2.new(0, 400, 0, 300)
+    local windowPosition = position or UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2)
     
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 6)
-    corner.Parent = frame
+    -- Create window frame
+    local window = CreateInstance("Frame", {
+        Name = title or "Window",
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        BorderSizePixel = 0,
+        Position = windowPosition,
+        Size = windowSize,
+        ZIndex = 2,
+        Parent = parent
+    })
     
-    CreateShadow(frame)
+    -- Add rounded corners
+    AddRoundedCorners(window)
+    
+    -- Add shadow
+    AddShadow(window)
     
     -- Create title bar
-    local titleBar = Instance.new("Frame")
-    titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 35)
-    titleBar.BackgroundColor3 = ShadowUI.Config.Theme.Background
-    titleBar.BorderSizePixel = 0
-    titleBar.ZIndex = 11
-    titleBar.Parent = frame
+    local titleBar = CreateInstance("Frame", {
+        Name = "TitleBar",
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 30),
+        ZIndex = 3,
+        Parent = window
+    })
     
-    local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 6)
-    titleCorner.Parent = titleBar
+    -- Add rounded corners to title bar (top corners only)
+    local titleCorner = CreateInstance("UICorner", {
+        CornerRadius = DEFAULT_CORNER_RADIUS,
+        Parent = titleBar
+    })
     
-    -- Remove frame border around title button
-    -- titleStroke removed
-    
-    local titleText = Instance.new("TextLabel")
-    titleText.Name = "Title"
-    titleText.Size = UDim2.new(1, -100, 1, 0) -- Adjusted for hide button
-    titleText.Position = UDim2.new(0, 10, 0, 0)
-    titleText.BackgroundTransparency = 1
-    titleText.Font = Enum.Font.GothamBold
-    titleText.Text = title or "ShadowUI"
-    titleText.TextColor3 = ShadowUI.Config.Theme.Text
-    titleText.TextSize = 14
-    titleText.TextXAlignment = Enum.TextXAlignment.Left
-    titleText.ZIndex = 12
-    titleText.Parent = titleBar
-    
-    -- Create hide button
-    local hideButton = Instance.new("TextButton")
-    hideButton.Name = "Hide"
-    hideButton.Size = UDim2.new(0, 24, 0, 24)
-    hideButton.Position = UDim2.new(1, -54, 0.5, -12)
-    hideButton.BackgroundColor3 = ShadowUI.Config.Theme.Accent
-    hideButton.BackgroundTransparency = 0.8
-    hideButton.BorderSizePixel = 0
-    hideButton.Font = Enum.Font.GothamBold
-    hideButton.Text = "-"
-    hideButton.TextColor3 = ShadowUI.Config.Theme.Text
-    hideButton.TextSize = 16
-    hideButton.ZIndex = 12
-    hideButton.Parent = titleBar
-    
-    local hideCorner = Instance.new("UICorner")
-    hideCorner.CornerRadius = UDim.new(0, 4)
-    hideCorner.Parent = hideButton
+    -- Create title text
+    local titleText = CreateInstance("TextLabel", {
+        Name = "Title",
+        BackgroundTransparency = 1,
+        Font = DEFAULT_FONT,
+        Text = title or "Window",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        ZIndex = 4,
+        Parent = titleBar
+    })
     
     -- Create close button
-    local closeButton = Instance.new("TextButton")
-    closeButton.Name = "Close"
-    closeButton.Size = UDim2.new(0, 24, 0, 24)
-    closeButton.Position = UDim2.new(1, -27, 0.5, -12)
-    closeButton.BackgroundColor3 = ShadowUI.Config.Theme.Error
-    closeButton.BackgroundTransparency = 0.8
-    closeButton.BorderSizePixel = 0
-    closeButton.Font = Enum.Font.GothamBold
-    closeButton.Text = "X"
-    closeButton.TextColor3 = ShadowUI.Config.Theme.Text
-    closeButton.TextSize = 12
-    closeButton.ZIndex = 12
-    closeButton.Parent = titleBar
+    local closeButton = CreateInstance("TextButton", {
+        Name = "Close",
+        BackgroundColor3 = Color3.fromRGB(255, 95, 95),
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -25, 0.5, -8),
+        Size = UDim2.new(0, 16, 0, 16),
+        Text = "",
+        ZIndex = 4,
+        Parent = titleBar
+    })
     
-    local closeCorner = Instance.new("UICorner")
-    closeCorner.CornerRadius = UDim.new(0, 4)
-    closeCorner.Parent = closeButton
+    -- Add rounded corners to close button
+    AddRoundedCorners(closeButton, UDim.new(1, 0))
     
-    -- Create content container
-    local container = Instance.new("ScrollingFrame")
-    container.Name = "Container"
-    container.Size = UDim2.new(1, -20, 1, -40)
-    container.Position = UDim2.new(0, 10, 0, 30)
-    container.BackgroundTransparency = 1
-    container.BorderSizePixel = 0
-    container.ScrollBarThickness = 4
-    container.ScrollBarImageColor3 = ShadowUI.Config.Theme.Accent
-    container.ZIndex = 11
-    container.CanvasSize = UDim2.new(0, 0, 0, 0)
-    container.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    container.Parent = frame
-    
-    local layout = Instance.new("UIListLayout")
-    layout.Padding = UDim.new(0, 8)
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Parent = container
-    
-    -- Button Hover Animations
-    hideButton.MouseEnter:Connect(function()
-        Tween(hideButton, {BackgroundTransparency = 0.3})
-    end)
-    
-    hideButton.MouseLeave:Connect(function()
-        Tween(hideButton, {BackgroundTransparency = 0.8})
-    end)
-    
-    closeButton.MouseEnter:Connect(function()
-        Tween(closeButton, {BackgroundTransparency = 0.3})
-    end)
-    
-    closeButton.MouseLeave:Connect(function()
-        Tween(closeButton, {BackgroundTransparency = 0.8})
-    end)
-    
-    -- Hide/Show functionality
-    local windowVisible = true
-    local originalSize = frame.Size
-    
-    hideButton.MouseButton1Click:Connect(function()
-        windowVisible = not windowVisible
-        
-        if windowVisible then
-            hideButton.Text = "-"
-            Tween(frame, {Size = originalSize}, 0.3)
-        else
-            hideButton.Text = "+"
-            originalSize = frame.Size -- Store current size before hiding
-            Tween(frame, {Size = UDim2.new(0, frame.Size.X.Offset, 0, 35)}, 0.3)
-        end
-    end)
-    
+    -- Add close button functionality
     closeButton.MouseButton1Click:Connect(function()
-        Tween(frame, {Size = UDim2.new(0, frame.Size.X.Offset, 0, 0)}, 0.3)
-        wait(0.3)
-        frame:Destroy()
+        window.Visible = false
     end)
+    
+    -- Create container for content
+    local container = CreateInstance("Frame", {
+        Name = "Container",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 30),
+        Size = UDim2.new(1, 0, 1, -30),
+        ZIndex = 3,
+        Parent = window
+    })
+    
+    -- Add padding to container
+    AddPadding(container)
     
     -- Make window draggable
-    MakeDraggable(titleBar)
+    MakeDraggable(window, titleBar)
     
-    -- Button Creator
-    function window:CreateButton(text, callback)
-        callback = callback or function() end
-        
-        local buttonFrame = Instance.new("Frame")
-        buttonFrame.Name = "Button_" .. text
-        buttonFrame.Size = UDim2.new(1, 0, 0, 40)
-        buttonFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-        buttonFrame.BorderSizePixel = 0
-        buttonFrame.ZIndex = 12
-        buttonFrame.Parent = container
-        
-        local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 4)
-        buttonCorner.Parent = buttonFrame
-        
-        local buttonLabel = Instance.new("TextLabel")
-        buttonLabel.Size = UDim2.new(1, -20, 1, 0)
-        buttonLabel.Position = UDim2.new(0, 10, 0, 0)
-        buttonLabel.BackgroundTransparency = 1
-        buttonLabel.Font = Enum.Font.GothamMedium
-        buttonLabel.Text = text
-        buttonLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        buttonLabel.TextSize = 14
-        buttonLabel.TextXAlignment = Enum.TextXAlignment.Left
-        buttonLabel.ZIndex = 13
-        buttonLabel.Parent = buttonFrame
-        
-        CreateGlow(buttonFrame)
-        
-        local buttonClick = Instance.new("TextButton")
-        buttonClick.Size = UDim2.new(1, 0, 1, 0)
-        buttonClick.BackgroundTransparency = 1
-        buttonClick.Text = ""
-        buttonClick.ZIndex = 13
-        buttonClick.Parent = buttonFrame
-        
-        buttonClick.MouseEnter:Connect(function()
-            Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-        end)
-        
-        buttonClick.MouseLeave:Connect(function()
-            Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-        end)
-        
-        buttonClick.MouseButton1Click:Connect(function()
-            Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.Accent, BackgroundTransparency = 0.7})
-            wait(0.15)
-            Tween(buttonFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover, BackgroundTransparency = 0})
-            pcall(callback)
-        end)
-        
-        return {
-            UpdateText = function(newText)
-                buttonLabel.Text = newText
-            end
-        }
-    end
+    -- Return window and container
+    return {
+        Window = window,
+        Container = container,
+        TitleBar = titleBar
+    }
+end
+
+-- Create a Button
+function FusionUI:CreateButton(parent, text, callback)
+    local button = CreateInstance("TextButton", {
+        Name = text or "Button",
+        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 35),
+        Font = DEFAULT_FONT,
+        Text = text or "Button",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        ZIndex = 4,
+        Parent = parent
+    })
     
-    -- Toggle Creator
-    function window:CreateToggle(text, default, callback)
-        callback = callback or function() end
-        local enabled = default or false
-        
-        local toggleFrame = Instance.new("Frame")
-        toggleFrame.Name = "Toggle_" .. text
-        toggleFrame.Size = UDim2.new(1, 0, 0, 40)
-        toggleFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-        toggleFrame.BorderSizePixel = 0
-        toggleFrame.ZIndex = 12
-        toggleFrame.Parent = container
-        
-        local toggleCorner = Instance.new("UICorner")
-        toggleCorner.CornerRadius = UDim.new(0, 4)
-        toggleCorner.Parent = toggleFrame
-        
-        local toggleLabel = Instance.new("TextLabel")
-        toggleLabel.Size = UDim2.new(1, -60, 1, 0)
-        toggleLabel.Position = UDim2.new(0, 10, 0, 0)
-        toggleLabel.BackgroundTransparency = 1
-        toggleLabel.Font = Enum.Font.GothamMedium
-        toggleLabel.Text = text
-        toggleLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        toggleLabel.TextSize = 14
-        toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
-        toggleLabel.ZIndex = 13
-        toggleLabel.Parent = toggleFrame
-        
-        local toggleSwitch = Instance.new("Frame")
-        toggleSwitch.Name = "Switch"
-        toggleSwitch.Size = UDim2.new(0, 42, 0, 22)
-        toggleSwitch.Position = UDim2.new(1, -52, 0.5, -11)
-        toggleSwitch.BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border
-        toggleSwitch.BorderSizePixel = 0
-        toggleSwitch.ZIndex = 13
-        toggleSwitch.Parent = toggleFrame
-        
-        local switchCorner = Instance.new("UICorner")
-        switchCorner.CornerRadius = UDim.new(1, 0)
-        switchCorner.Parent = toggleSwitch
-        
-        local switchGlow = CreateGlow(toggleSwitch)
-        
-        local switchIndicator = Instance.new("Frame")
-        switchIndicator.Size = UDim2.new(0, 16, 0, 16)
-        switchIndicator.Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)
-        switchIndicator.BackgroundColor3 = ShadowUI.Config.Theme.Text
-        switchIndicator.BorderSizePixel = 0
-        switchIndicator.ZIndex = 14
-        switchIndicator.Parent = toggleSwitch
-        
-        local indicatorCorner = Instance.new("UICorner")
-        indicatorCorner.CornerRadius = UDim.new(1, 0)
-        indicatorCorner.Parent = switchIndicator
-        
-        local toggleClick = Instance.new("TextButton")
-        toggleClick.Size = UDim2.new(1, 0, 1, 0)
-        toggleClick.BackgroundTransparency = 1
-        toggleClick.Text = ""
-        toggleClick.ZIndex = 13
-        toggleClick.Parent = toggleFrame
-        
-        local function updateToggle()
-            local pulse = Instance.new("Frame")
-            pulse.Size = UDim2.new(0, 0, 0, 0)
-            pulse.Position = UDim2.new(0.5, 0, 0.5, 0)
-            pulse.AnchorPoint = Vector2.new(0.5, 0.5)
-            pulse.BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border
-            pulse.BackgroundTransparency = 0.7
-            pulse.BorderSizePixel = 0
-            pulse.ZIndex = 12
-            pulse.Parent = toggleSwitch
-            
-            local pulseCorner = Instance.new("UICorner")
-            pulseCorner.CornerRadius = UDim.new(1, 0)
-            pulseCorner.Parent = pulse
-            
-            Tween(pulse, {Size = UDim2.new(2, 0, 2, 0), BackgroundTransparency = 1}, 0.3)
-            Tween(toggleSwitch, {BackgroundColor3 = enabled and ShadowUI.Config.Theme.Accent or ShadowUI.Config.Theme.Border})
-            Tween(switchIndicator, {Position = enabled and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 4, 0.5, -8)})
-            
-            game:GetService("Debris"):AddItem(pulse, 0.3)
-            pcall(callback, enabled)
+    -- Add rounded corners
+    AddRoundedCorners(button)
+    
+    -- Add hover and click effects
+    button.MouseEnter:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+    end)
+    
+    button.MouseLeave:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = DEFAULT_ACCENT_COLOR}):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(button, TweenInfo.new(0.1), {BackgroundColor3 = Color3.fromRGB(60, 60, 60)}):Play()
+        if callback then callback() end
+    end)
+    
+    return button
+end
+
+-- Create a Label
+function FusionUI:CreateLabel(parent, text, textSize)
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, textSize or (DEFAULT_TEXT_SIZE + 10)),
+        Font = DEFAULT_FONT,
+        Text = text or "Label",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = textSize or DEFAULT_TEXT_SIZE,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 4,
+        Parent = parent
+    })
+    
+    return label
+end
+
+-- Create a TextBox
+function FusionUI:CreateTextBox(parent, placeholderText, callback)
+    local textBoxFrame = CreateInstance("Frame", {
+        Name = "TextBoxFrame",
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 35),
+        ZIndex = 4,
+        Parent = parent
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(textBoxFrame)
+    
+    local textBox = CreateInstance("TextBox", {
+        Name = "TextBox",
+        BackgroundTransparency = 1,
+        ClearTextOnFocus = false,
+        Font = DEFAULT_FONT,
+        PlaceholderText = placeholderText or "Enter text...",
+        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+        Text = "",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 10, 0, 0),
+        ZIndex = 5,
+        Parent = textBoxFrame
+    })
+    
+    -- Add focus highlight
+    textBox.Focused:Connect(function()
+        AddGlow(textBoxFrame, DEFAULT_ACCENT_COLOR, 0.8)
+        TweenService:Create(textBoxFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(50, 50, 50)}):Play()
+    end)
+    
+    textBox.FocusLost:Connect(function(enterPressed)
+        if textBoxFrame:FindFirstChild("Glow") then
+            textBoxFrame.Glow:Destroy()
         end
+        TweenService:Create(textBoxFrame, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(40, 40, 40)}):Play()
         
-        toggleClick.MouseEnter:Connect(function()
-            Tween(toggleFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-        end)
-        
-        toggleClick.MouseLeave:Connect(function()
-            Tween(toggleFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-        end)
-        
-        toggleClick.MouseButton1Click:Connect(function()
+        if enterPressed and callback then
+            callback(textBox.Text)
+        end
+    end)
+    
+    return textBox
+end
+
+-- Create a Toggle
+function FusionUI:CreateToggle(parent, text, default, callback)
+    local toggle = CreateInstance("Frame", {
+        Name = "Toggle",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 30),
+        ZIndex = 4,
+        Parent = parent
+    })
+    
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -40, 1, 0),
+        Font = DEFAULT_FONT,
+        Text = text or "Toggle",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 5,
+        Parent = toggle
+    })
+    
+    local toggleButton = CreateInstance("Frame", {
+        Name = "ToggleButton",
+        BackgroundColor3 = default and DEFAULT_ACCENT_COLOR or Color3.fromRGB(80, 80, 80),
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -40, 0.5, -10),
+        Size = UDim2.new(0, 40, 0, 20),
+        ZIndex = 5,
+        Parent = toggle
+    })
+    
+    -- Add rounded corners
+    AddRoundedCorners(toggleButton, UDim.new(0, 10))
+    
+    local toggleCircle = CreateInstance("Frame", {
+        Name = "Circle",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Position = default and UDim2.new(1, -18, 0.5, 0) or UDim2.new(0, 2, 0.5, 0),
+        Size = UDim2.new(0, 16, 0, 16),
+        AnchorPoint = Vector2.new(0, 0.5),
+        ZIndex = 6,
+        Parent = toggleButton
+    })
+    
+    -- Add rounded corners to circle
+    AddRoundedCorners(toggleCircle, UDim.new(1, 0))
+    
+    -- Toggle state
+    local enabled = default or false
+    
+    -- Make toggle clickable
+    toggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
             enabled = not enabled
-            updateToggle()
-        end)
-        
-        return {
-            Set = function(value)
-                enabled = value
-                updateToggle()
-            end,
-            GetState = function()
-                return enabled
-            end
-        }
-    end
-    
-    -- Slider Creator
-    function window:CreateSlider(text, min, max, default, callback)
-        min = min or 0
-        max = max or 100
-        default = default or min
-        callback = callback or function() end
-        
-        local value = default
-        
-        local sliderFrame = Instance.new("Frame")
-        sliderFrame.Name = "Slider_" .. text
-        sliderFrame.Size = UDim2.new(1, 0, 0, 60)
-        sliderFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-        sliderFrame.BorderSizePixel = 0
-        sliderFrame.ZIndex = 12
-        sliderFrame.Parent = container
-        
-        local sliderCorner = Instance.new("UICorner")
-        sliderCorner.CornerRadius = UDim.new(0, 4)
-        sliderCorner.Parent = sliderFrame
-        
-        local sliderLabel = Instance.new("TextLabel")
-        sliderLabel.Size = UDim2.new(1, -80, 0, 25)
-        sliderLabel.Position = UDim2.new(0, 10, 0, 5)
-        sliderLabel.BackgroundTransparency = 1
-        sliderLabel.Font = Enum.Font.GothamMedium
-        sliderLabel.Text = text
-        sliderLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        sliderLabel.TextSize = 14
-        sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
-        sliderLabel.ZIndex = 13
-        sliderLabel.Parent = sliderFrame
-        
-        local valueLabel = Instance.new("TextLabel")
-        valueLabel.Size = UDim2.new(0, 70, 0, 25)
-        valueLabel.Position = UDim2.new(1, -75, 0, 5)
-        valueLabel.BackgroundTransparency = 1
-        valueLabel.Font = Enum.Font.GothamMedium
-        valueLabel.Text = tostring(value)
-        valueLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        valueLabel.TextSize = 14
-        valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-        valueLabel.ZIndex = 13
-        valueLabel.Parent = sliderFrame
-        
-        local sliderBg = Instance.new("Frame")
-        sliderBg.Size = UDim2.new(1, -20, 0, 10)
-        sliderBg.Position = UDim2.new(0, 10, 0, 37)
-        sliderBg.BackgroundColor3 = ShadowUI.Config.Theme.Border
-        sliderBg.BorderSizePixel = 0
-        sliderBg.ZIndex = 13
-        sliderBg.Parent = sliderFrame
-        
-        local sliderBgCorner = Instance.new("UICorner")
-        sliderBgCorner.CornerRadius = UDim.new(1, 0)
-        sliderBgCorner.Parent = sliderBg
-        
-        local percent = (value - min) / (max - min)
-        
-        local sliderFill = Instance.new("Frame")
-        sliderFill.Size = UDim2.new(percent, 0, 1, 0)
-        sliderFill.BackgroundColor3 = ShadowUI.Config.Theme.Accent
-        sliderFill.BorderSizePixel = 0
-        sliderFill.ZIndex = 14
-        sliderFill.Parent = sliderBg
-        
-        local sliderFillCorner = Instance.new("UICorner")
-        sliderFillCorner.CornerRadius = UDim.new(1, 0)
-        sliderFillCorner.Parent = sliderFill
-        
-        local sliderIndicator = Instance.new("Frame")
-        sliderIndicator.Size = UDim2.new(0, 18, 0, 18)
-        sliderIndicator.Position = UDim2.new(percent, -9, 0.5, -9)
-        sliderIndicator.BackgroundColor3 = ShadowUI.Config.Theme.Text
-        sliderIndicator.BorderSizePixel = 0
-        sliderIndicator.ZIndex = 15
-        sliderIndicator.Parent = sliderBg
-        
-        local indicatorCorner = Instance.new("UICorner")
-        indicatorCorner.CornerRadius = UDim.new(1, 0)
-        indicatorCorner.Parent = sliderIndicator
-        
-        CreateGlow(sliderIndicator)
-        
-        local sliderClick = Instance.new("TextButton")
-        sliderClick.Size = UDim2.new(1, 0, 1, 0)
-        sliderClick.BackgroundTransparency = 1
-        sliderClick.Text = ""
-        sliderClick.ZIndex = 13
-        sliderClick.Parent = sliderFrame
-        
-        local function updateSlider(input)
-            local relativePos = input - sliderBg.AbsolutePosition.X
-            local percent = math.clamp(relativePos / sliderBg.AbsoluteSize.X, 0, 1)
-            local newValue = math.floor((min + (max - min) * percent) * 10) / 10
             
-            if value ~= newValue then
-                value = newValue
-                valueLabel.Text = tostring(value)
-                Tween(sliderFill, {Size = UDim2.new(percent, 0, 1, 0)})
-                Tween(sliderIndicator, {Position = UDim2.new(percent, -9, 0.5, -9)})
-                pcall(callback, value)
-            end
-        end
-        
-        local dragging = false
-        
-        sliderClick.MouseButton1Down:Connect(function()
-            dragging = true
-            updateSlider(Mouse.X)
-        end)
-        
-        sliderClick.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                updateSlider(input.Position.X)
-            end
-        end)
-        
-        UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-                if dragging then
-                    updateSlider(input.Position.X)
-                end
-            end
-        end)
-        
-        sliderClick.MouseEnter:Connect(function()
-            Tween(sliderFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-        end)
-        
-        sliderClick.MouseLeave:Connect(function()
-            Tween(sliderFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-        end)
-        
-        return {
-            Set = function(newValue)
-                value = math.clamp(newValue, min, max)
-                local percent = (value - min) / (max - min)
-                valueLabel.Text = tostring(value)
-                Tween(sliderFill, {Size = UDim2.new(percent, 0, 1, 0)})
-                Tween(sliderIndicator, {Position = UDim2.new(percent, -9, 0.5, -9)})
-                pcall(callback, value)
-            end,
-            GetValue = function()
-                return value
-            end
-        }
-    end
-    
-    -- Input Creator
-    function window:CreateInput(text, placeholder, callback)
-        callback = callback or function() end
-        
-        local inputFrame = Instance.new("Frame")
-        inputFrame.Name = "Input_" .. text
-        inputFrame.Size = UDim2.new(1, 0, 0, 70)
-        inputFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-        inputFrame.BorderSizePixel = 0
-        inputFrame.ZIndex = 12
-        inputFrame.Parent = container
-        
-        local inputCorner = Instance.new("UICorner")
-        inputCorner.CornerRadius = UDim.new(0, 4)
-        inputCorner.Parent = inputFrame
-        
-        local inputLabel = Instance.new("TextLabel")
-        inputLabel.Size = UDim2.new(1, -20, 0, 25)
-        inputLabel.Position = UDim2.new(0, 10, 0, 5)
-        inputLabel.BackgroundTransparency = 1
-        inputLabel.Font = Enum.Font.GothamMedium
-        inputLabel.Text = text
-        inputLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        inputLabel.TextSize = 14
-        inputLabel.TextXAlignment = Enum.TextXAlignment.Left
-        inputLabel.ZIndex = 13
-        inputLabel.Parent = inputFrame
-        
-        local inputBox = Instance.new("TextBox")
-        inputBox.Size = UDim2.new(1, -20, 0, 30)
-        inputBox.Position = UDim2.new(0, 10, 0, 30)
-        inputBox.BackgroundColor3 = ShadowUI.Config.Theme.Background
-        inputBox.BorderSizePixel = 0
-        inputBox.Font = Enum.Font.Gotham
-        inputBox.PlaceholderText = placeholder or "Enter text..."
-        inputBox.PlaceholderColor3 = Color3.fromRGB(130, 130, 130)
-        inputBox.Text = ""
-        inputBox.TextColor3 = ShadowUI.Config.Theme.Text
-        inputBox.TextSize = 14
-        inputBox.TextXAlignment = Enum.TextXAlignment.Left
-        inputBox.ClearTextOnFocus = false
-        inputBox.ZIndex = 13
-        inputBox.Parent = inputFrame
-        
-        local inputBoxCorner = Instance.new("UICorner")
-        inputBoxCorner.CornerRadius = UDim.new(0, 4)
-        inputBoxCorner.Parent = inputBox
-        
-        local inputBoxPadding = Instance.new("UIPadding")
-        inputBoxPadding.PaddingLeft = UDim.new(0, 8)
-        inputBoxPadding.PaddingRight = UDim.new(0, 8)
-        inputBoxPadding.Parent = inputBox
-        
-        inputBox.FocusLost:Connect(function(enterPressed)
-            if enterPressed then
-                pcall(callback, inputBox.Text)
-            end
-        end)
-        
-        inputFrame.MouseEnter:Connect(function()
-            Tween(inputFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-						end)
-        
-        inputFrame.MouseLeave:Connect(function()
-            Tween(inputFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-        end)
-        
-        return {
-            GetText = function()
-                return inputBox.Text
-            end,
-            SetText = function(newText)
-                inputBox.Text = newText
-            end,
-            ClearText = function()
-                inputBox.Text = ""
-            end
-        }
-    end
-    
-    -- Label Creator
-    function window:CreateLabel(text)
-        local labelFrame = Instance.new("Frame")
-        labelFrame.Name = "Label"
-        labelFrame.Size = UDim2.new(1, 0, 0, 30)
-        labelFrame.BackgroundTransparency = 1
-        labelFrame.ZIndex = 12
-        labelFrame.Parent = container
-        
-        local labelText = Instance.new("TextLabel")
-        labelText.Size = UDim2.new(1, -20, 1, 0)
-        labelText.Position = UDim2.new(0, 10, 0, 0)
-        labelText.BackgroundTransparency = 1
-        labelText.Font = Enum.Font.GothamMedium
-        labelText.Text = text
-        labelText.TextColor3 = ShadowUI.Config.Theme.Text
-        labelText.TextSize = 14
-        labelText.TextXAlignment = Enum.TextXAlignment.Left
-        labelText.TextWrapped = true
-        labelText.ZIndex = 13
-        labelText.Parent = labelFrame
-        
-        return {
-            UpdateText = function(newText)
-                labelText.Text = newText
-            end
-        }
-    end
-    
-    -- Dropdown Creator
-    function window:CreateDropdown(text, options, default, callback)
-        callback = callback or function() end
-        options = options or {}
-        default = default or options[1] or ""
-        
-        local dropFrame = Instance.new("Frame")
-        dropFrame.Name = "Dropdown_" .. text
-        dropFrame.Size = UDim2.new(1, 0, 0, 70)
-        dropFrame.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-        dropFrame.BorderSizePixel = 0
-        dropFrame.ZIndex = 12
-        dropFrame.ClipsDescendants = true
-        dropFrame.Parent = container
-        
-        local dropCorner = Instance.new("UICorner")
-        dropCorner.CornerRadius = UDim.new(0, 4)
-        dropCorner.Parent = dropFrame
-        
-        local dropLabel = Instance.new("TextLabel")
-        dropLabel.Size = UDim2.new(1, -20, 0, 25)
-        dropLabel.Position = UDim2.new(0, 10, 0, 5)
-        dropLabel.BackgroundTransparency = 1
-        dropLabel.Font = Enum.Font.GothamMedium
-        dropLabel.Text = text
-        dropLabel.TextColor3 = ShadowUI.Config.Theme.Text
-        dropLabel.TextSize = 14
-        dropLabel.TextXAlignment = Enum.TextXAlignment.Left
-        dropLabel.ZIndex = 13
-        dropLabel.Parent = dropFrame
-        
-        local dropButton = Instance.new("TextButton")
-        dropButton.Size = UDim2.new(1, -20, 0, 30)
-        dropButton.Position = UDim2.new(0, 10, 0, 30)
-        dropButton.BackgroundColor3 = ShadowUI.Config.Theme.Background
-        dropButton.BorderSizePixel = 0
-        dropButton.Font = Enum.Font.Gotham
-        dropButton.Text = default
-        dropButton.TextColor3 = ShadowUI.Config.Theme.Text
-        dropButton.TextSize = 14
-        dropButton.TextXAlignment = Enum.TextXAlignment.Left
-        dropButton.ZIndex = 13
-        dropButton.Parent = dropFrame
-        
-        local dropButtonCorner = Instance.new("UICorner")
-        dropButtonCorner.CornerRadius = UDim.new(0, 4)
-        dropButtonCorner.Parent = dropButton
-        
-        local dropButtonPadding = Instance.new("UIPadding")
-        dropButtonPadding.PaddingLeft = UDim.new(0, 8)
-        dropButtonPadding.PaddingRight = UDim.new(0, 8)
-        dropButtonPadding.Parent = dropButton
-        
-        local dropArrow = Instance.new("TextLabel")
-        dropArrow.Size = UDim2.new(0, 20, 0, 20)
-        dropArrow.Position = UDim2.new(1, -25, 0.5, -10)
-        dropArrow.BackgroundTransparency = 1
-        dropArrow.Font = Enum.Font.GothamBold
-        dropArrow.Text = "▼"
-        dropArrow.TextColor3 = ShadowUI.Config.Theme.Text
-        dropArrow.TextSize = 12
-        dropArrow.ZIndex = 14
-        dropArrow.Parent = dropButton
-        
-        local dropList = Instance.new("Frame")
-        dropList.Name = "OptionList"
-        dropList.Size = UDim2.new(1, -20, 0, 0)
-        dropList.Position = UDim2.new(0, 10, 0, 65)
-        dropList.BackgroundColor3 = ShadowUI.Config.Theme.Background
-        dropList.BorderSizePixel = 0
-        dropList.ZIndex = 15
-        dropList.Visible = false
-        dropList.Parent = dropFrame
-        
-        local dropListCorner = Instance.new("UICorner")
-        dropListCorner.CornerRadius = UDim.new(0, 4)
-        dropListCorner.Parent = dropList
-        
-        local dropListLayout = Instance.new("UIListLayout")
-        dropListLayout.Padding = UDim.new(0, 2)
-        dropListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-        dropListLayout.Parent = dropList
-        
-        local isOpen = false
-        local selectedOption = default
-        
-        local function updateDropdown()
-            dropButton.Text = selectedOption
-            pcall(callback, selectedOption)
-        end
-        
-        local function createOption(option)
-            local optionButton = Instance.new("TextButton")
-            optionButton.Size = UDim2.new(1, 0, 0, 28)
-            optionButton.BackgroundColor3 = ShadowUI.Config.Theme.ElementBg
-            optionButton.BorderSizePixel = 0
-            optionButton.Font = Enum.Font.Gotham
-            optionButton.Text = option
-            optionButton.TextColor3 = ShadowUI.Config.Theme.Text
-            optionButton.TextSize = 14
-            optionButton.TextXAlignment = Enum.TextXAlignment.Left
-            optionButton.ZIndex = 16
-            optionButton.Parent = dropList
-            
-            local optionPadding = Instance.new("UIPadding")
-            optionPadding.PaddingLeft = UDim.new(0, 8)
-            optionPadding.Parent = optionButton
-            
-            optionButton.MouseEnter:Connect(function()
-                Tween(optionButton, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-            end)
-            
-            optionButton.MouseLeave:Connect(function()
-                Tween(optionButton, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-            end)
-            
-            optionButton.MouseButton1Click:Connect(function()
-                selectedOption = option
-                updateDropdown()
-                isOpen = false
-                Tween(dropArrow, {Rotation = 0})
-                Tween(dropList, {Size = UDim2.new(1, -20, 0, 0)})
-                wait(0.2)
-                dropList.Visible = false
-                dropFrame.Size = UDim2.new(1, 0, 0, 70)
-            end)
-        end
-        
-        for _, option in ipairs(options) do
-            createOption(option)
-        end
-        
-        dropButton.MouseButton1Click:Connect(function()
-            isOpen = not isOpen
-            
-            if isOpen then
-                dropList.Visible = true
-                local listHeight = #options * 30
-                dropFrame.Size = UDim2.new(1, 0, 0, 70 + listHeight)
-                Tween(dropArrow, {Rotation = 180})
-                Tween(dropList, {Size = UDim2.new(1, -20, 0, listHeight)})
+            -- Animate toggle
+            if enabled then
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = DEFAULT_ACCENT_COLOR}):Play()
+                TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0)}):Play()
             else
-                Tween(dropArrow, {Rotation = 0})
-                Tween(dropList, {Size = UDim2.new(1, -20, 0, 0)})
-                wait(0.2)
-                dropList.Visible = false
-                dropFrame.Size = UDim2.new(1, 0, 0, 70)
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
+                TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0)}):Play()
             end
-        end)
-        
-        dropFrame.MouseEnter:Connect(function()
-            Tween(dropFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementHover})
-        end)
-        
-        dropFrame.MouseLeave:Connect(function()
-            Tween(dropFrame, {BackgroundColor3 = ShadowUI.Config.Theme.ElementBg})
-        end)
-        
-        return {
-            SetOptions = function(newOptions)
-                for _, child in pairs(dropList:GetChildren()) do
-                    if child:IsA("TextButton") then
-                        child:Destroy()
-                    end
-                end
-                
-                options = newOptions
-                for _, option in ipairs(options) do
-                    createOption(option)
-                end
-                
-                if not table.find(options, selectedOption) and #options > 0 then
-                    selectedOption = options[1]
-                    updateDropdown()
-                end
-            end,
-            SelectOption = function(option)
-                if table.find(options, option) then
-                    selectedOption = option
-                    updateDropdown()
-                end
-            end,
-            GetSelected = function()
-                return selectedOption
+            
+            if callback then
+                callback(enabled)
             end
-        }
-    end
+        end
+    end)
     
-    -- Section Creator
-    function window:CreateSection(title)
-        local sectionFrame = Instance.new("Frame")
-        sectionFrame.Name = "Section_" .. title
-        sectionFrame.Size = UDim2.new(1, 0, 0, 35)
-        sectionFrame.BackgroundColor3 = ShadowUI.Config.Theme.Background
-        sectionFrame.BorderSizePixel = 0
-        sectionFrame.ZIndex = 12
-        sectionFrame.Parent = container
-        
-        local sectionCorner = Instance.new("UICorner")
-        sectionCorner.CornerRadius = UDim.new(0, 4)
-        sectionCorner.Parent = sectionFrame
-        
-        local sectionTitle = Instance.new("TextLabel")
-        sectionTitle.Size = UDim2.new(1, -20, 1, 0)
-        sectionTitle.Position = UDim2.new(0, 10, 0, 0)
-        sectionTitle.BackgroundTransparency = 1
-        sectionTitle.Font = Enum.Font.GothamBold
-        sectionTitle.Text = title
-        sectionTitle.TextColor3 = ShadowUI.Config.Theme.Accent
-        sectionTitle.TextSize = 14
-        sectionTitle.TextXAlignment = Enum.TextXAlignment.Left
-        sectionTitle.ZIndex = 13
-        sectionTitle.Parent = sectionFrame
-        
-        return {
-            UpdateTitle = function(newTitle)
-                sectionTitle.Text = newTitle
+    -- Make entire toggle clickable
+    toggle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            enabled = not enabled
+            
+            -- Animate toggle
+            if enabled then
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = DEFAULT_ACCENT_COLOR}):Play()
+                TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(1, -18, 0.5, 0)}):Play()
+            else
+                TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(80, 80, 80)}):Play()
+                TweenService:Create(toggleCircle, TweenInfo.new(0.2), {Position = UDim2.new(0, 2, 0.5, 0)}):Play()
             end
-        }
-    end
+            
+            if callback then
+                callback(enabled)
+            end
+        end
+    end)
     
-    -- Notification Function
-    function window:CreateNotification(title, message, duration)
-        duration = duration or 3
+    return toggle, enabled
+end
+
+-- Create a Slider
+function FusionUI:CreateSlider(parent, text, min, max, default, callback)
+    min = min or 0
+    max = max or 100
+    default = default or min
+    
+    local slider = CreateInstance("Frame", {
+        Name = "Slider",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 50),
+        ZIndex = 4,
+        Parent = parent
+    })
+    
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -50, 0, 20),
+        Position = UDim2.new(0, 0, 0, 0),
+        Font = DEFAULT_FONT,
+        Text = text or "Slider",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 5,
+        Parent = slider
+    })
+    
+    local valueLabel = CreateInstance("TextLabel", {
+        Name = "Value",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -40, 0, 0),
+        Font = DEFAULT_FONT,
+        Text = tostring(default),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = DEFAULT_TEXT_SIZE,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        ZIndex = 5,
+        Parent = slider
+    })
+    
+    local sliderBar = CreateInstance("Frame", {
+        Name = "SliderBar",
+        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 30),
+        Size = UDim2.new(1, 0, 0, 6),
+        ZIndex = 5,
+        Parent = slider
+    })
+    
+    -- Add rounded corners to slider bar
+    AddRoundedCorners(sliderBar, UDim.new(0, 3))
+    
+    local sliderFill = CreateInstance("Frame", {
+        Name = "SliderFill",
+        BackgroundColor3 = DEFAULT_ACCENT_COLOR,
+        BorderSizePixel = 0,
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        ZIndex = 6,
+        Parent = sliderBar
+    })
+    
+    -- Add rounded corners to slider fill
+    AddRoundedCorners(sliderFill, UDim.new(0, 3))
+    
+    local sliderButton = CreateInstance("Frame", {
+        Name = "SliderButton",
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+        Size = UDim2.new(0, 14, 0, 14),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        ZIndex = 7,
+        Parent = sliderBar
+    })
+    
+    -- Add rounded corners to slider button
+    AddRoundedCorners(sliderButton, UDim.new(1, 0))
+    
+    -- Add shadow to slider button
+    AddShadow(sliderButton, 0.4, UDim2.new(1, 4, 1, 4))
+    
+    -- Slider functionality
+    local dragging = false
+    
+    local function updateSlider(input)
+        local xPos = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+        local value = min + ((max - min) * xPos)
+        value = math.floor(value * 10) / 10  -- Round to 1 decimal place
         
-        local notifFrame = Instance.new("Frame")
-        notifFrame.Name = "Notification"
-        notifFrame.Size = UDim2.new(0, 280, 0, 80)
-        notifFrame.Position = UDim2.new(1, 20, 0.5, 0)
-        notifFrame.AnchorPoint = Vector2.new(0, 0.5)
-        notifFrame.BackgroundColor3 = ShadowUI.Config.Theme.Background
-        notifFrame.BorderSizePixel = 0
-        notifFrame.ZIndex = 100
-        notifFrame.Parent = ScreenGui
+        sliderFill.Size = UDim2.new(xPos, 0, 1, 0)
+        sliderButton.Position = UDim2.new(xPos, 0, 0.5, 0)
+        valueLabel.Text = tostring(value)
         
-        local notifCorner = Instance.new("UICorner")
-        notifCorner.CornerRadius = UDim.new(0, 6)
-        notifCorner.Parent = notifFrame
-        
-        CreateShadow(notifFrame)
-        
-        local notifAccent = Instance.new("Frame")
-        notifAccent.Size = UDim2.new(0, 4, 1, 0)
-        notifAccent.BackgroundColor3 = ShadowUI.Config.Theme.Accent
-        notifAccent.BorderSizePixel = 0
-        notifAccent.ZIndex = 101
-        notifAccent.Parent = notifFrame
-        
-        local accentCorner = Instance.new("UICorner")
-        accentCorner.CornerRadius = UDim.new(0, 6)
-        accentCorner.Parent = notifAccent
-        
-        local notifTitle = Instance.new("TextLabel")
-        notifTitle.Size = UDim2.new(1, -20, 0, 25)
-        notifTitle.Position = UDim2.new(0, 10, 0, 5)
-        notifTitle.BackgroundTransparency = 1
-        notifTitle.Font = Enum.Font.GothamBold
-        notifTitle.Text = title
-        notifTitle.TextColor3 = ShadowUI.Config.Theme.Text
-        notifTitle.TextSize = 14
-        notifTitle.TextXAlignment = Enum.TextXAlignment.Left
-        notifTitle.ZIndex = 101
-        notifTitle.Parent = notifFrame
-        
-        local notifMessage = Instance.new("TextLabel")
-        notifMessage.Size = UDim2.new(1, -20, 0, 40)
-        notifMessage.Position = UDim2.new(0, 10, 0, 30)
-        notifMessage.BackgroundTransparency = 1
-        notifMessage.Font = Enum.Font.Gotham
-        notifMessage.Text = message
-        notifMessage.TextColor3 = ShadowUI.Config.Theme.Text
-        notifMessage.TextSize = 13
-        notifMessage.TextWrapped = true
-        notifMessage.TextXAlignment = Enum.TextXAlignment.Left
-        notifMessage.ZIndex = 101
-        notifMessage.Parent = notifFrame
-        
-        local closeButton = Instance.new("TextButton")
-        closeButton.Size = UDim2.new(0, 20, 0, 20)
-        closeButton.Position = UDim2.new(1, -25, 0, 5)
-        closeButton.BackgroundTransparency = 1
-        closeButton.Font = Enum.Font.GothamBold
-        closeButton.Text = "×"
-        closeButton.TextColor3 = ShadowUI.Config.Theme.Text
-        closeButton.TextSize = 16
-        closeButton.ZIndex = 101
-        closeButton.Parent = notifFrame
-        
-        Tween(notifFrame, {Position = UDim2.new(1, -20, 0.5, 0)}, 0.3)
-        
-        closeButton.MouseButton1Click:Connect(function()
-            Tween(notifFrame, {Position = UDim2.new(1, 280, 0.5, 0)}, 0.3)
-            wait(0.3)
-            notifFrame:Destroy()
-        end)
-        
-        wait(duration)
-        if notifFrame and notifFrame.Parent then
-            Tween(notifFrame, {Position = UDim2.new(1, 280, 0.5, 0)}, 0.3)
-            wait(0.3)
-            if notifFrame and notifFrame.Parent then
-                notifFrame:Destroy()
-            end
+        if callback then
+            callback(value)
         end
     end
     
-    return window
-end
-
--- Function to set theme
-function ShadowUI:SetTheme(theme)
-    for key, value in pairs(theme) do
-        if ShadowUI.Config.Theme[key] then
-            ShadowUI.Config.Theme[key] = value
+    sliderBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            updateSlider(input)
         end
-    end
+    end)
+    
+    sliderBar.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input)
+        end
+    end)
+    
+    return slider
 end
 
-return ShadowUI
+return FusionUI
