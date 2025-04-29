@@ -9,6 +9,7 @@
     * Smooth animations
 ]]
 
+-- Create the main library object
 local SimpluxUI = {}
 SimpluxUI.__index = SimpluxUI
 
@@ -305,11 +306,11 @@ function SimpluxUI:CreateButton(window, text, callback)
     end)
     
     button.MouseButton1Down:Connect(function()
-        Tween(button, {Size = UDim2.new(0.98, 0, 0.96, 0), Position = UDim2.new(0.01, 0, 0.02, 0)}, 0.1)
+        Tween(button, {BackgroundColor3 = Color3.fromRGB(51, 57, 64)}, 0.1)
     end)
     
     button.MouseButton1Up:Connect(function()
-        Tween(button, {Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0)}, 0.1)
+        Tween(button, {BackgroundColor3 = Config.SecondaryColor}, 0.1)
         if callback then callback() end
     end)
     
@@ -548,27 +549,10 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
     }
 end
 
---[[
-    Example usage:
-    
-    local SimpluxUI = require(script.SimpluxUI)
-    local ui = SimpluxUI.new("My First UI")
-    
-    local mainWindow = ui:CreateWindow("SimpluxUI Demo", UDim2.new(0, 400, 0, 300))
-    
-    ui:CreateLabel(mainWindow, "Welcome to SimpluxUI!")
-    
-    ui:CreateButton(mainWindow, "Click Me!", function()
-        print("Button clicked!")
-    end)
-    
-    local toggle = ui:CreateToggle(mainWindow, "Enable Feature", false, function(value)
-        print("Toggle set to: " .. tostring(value))
-    end)
-    
-    local slider = ui:CreateSlider(mainWindow, "Brightness", 0, 100, 50, function(value)
-        print("Slider value: " .. value)
-    end)
-]]
+-- Add to global environment if available (for backwards compatibility)
+if getgenv then
+    getgenv().SimpluxUI = SimpluxUI
+end
 
+-- Return the library object for direct assignment
 return SimpluxUI
