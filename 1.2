@@ -1,5 +1,5 @@
 --[[
-    SimpluxUI Library v1.1
+    SimpluxUI Library v1.2
     A lightweight UI library for Roblox with modern features
     * Rounded elements
     * Custom typography
@@ -9,6 +9,7 @@
     * Smooth animations
     * Scrolling support
     * Minimize functionality
+    * Tabs support
 ]]
 
 -- Create the main library object
@@ -29,7 +30,8 @@ local Config = {
     AnimationDuration = 0.2,
     AnimationEasingStyle = Enum.EasingStyle.Quart,
     AnimationEasingDirection = Enum.EasingDirection.Out,
-    ButtonWidth = UDim.new(0.8, 0) -- Added smaller button width
+    ButtonWidth = UDim.new(0.9, 0), -- Increased button width
+    TabHeight = 36 -- Added tab height
 }
 
 -- Utility Functions
@@ -243,47 +245,59 @@ function SimpluxUI:CreateWindow(title, size)
         window:Destroy()
     end)
     
-    -- Content frame with scroll capability
-    local scrollFrame = CreateInstance("ScrollingFrame", {
-        Name = "ScrollFrame",
-        BackgroundTransparency = 1,
+    -- Tab container
+    local tabContainer = CreateInstance("Frame", {
+        Name = "TabContainer",
+        BackgroundColor3 = Config.SecondaryColor,
         Position = UDim2.new(0, 0, 0, 36),
-        Size = UDim2.new(1, 0, 1, -36),
+        Size = UDim2.new(1, 0, 0, Config.TabHeight),
         ZIndex = 11,
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = Config.AccentColor,
-        BorderSizePixel = 0,
         Parent = window
     })
     
-    local contentFrame = CreateInstance("Frame", {
-        Name = "Content",
+    local tabContainerCorner = ApplyRoundedCorners(tabContainer)
+    tabContainerCorner.CornerRadius = UDim.new(0, 6)
+    
+    local tabScrollFrame = CreateInstance("ScrollingFrame", {
+        Name = "TabScrollFrame",
         BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
         Size = UDim2.new(1, 0, 1, 0),
         ZIndex = 11,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        Parent = scrollFrame
+        ScrollBarThickness = 2,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+        ScrollBarImageColor3 = Config.AccentColor,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = tabContainer
     })
     
-    local contentPadding = CreateInstance("UIPadding", {
-        PaddingBottom = Config.Padding,
-        PaddingLeft = Config.Padding,
-        PaddingRight = Config.Padding,
-        PaddingTop = Config.Padding,
-        Parent = contentFrame
-    })
-    
-    local contentLayout = CreateInstance("UIListLayout", {
-        Padding = UDim.new(0, 8),
+    local tabLayout = CreateInstance("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = contentFrame
+        Padding = UDim.new(0, 2),
+        Parent = tabScrollFrame
     })
     
-    -- Auto-size the content frame
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        contentFrame.Size = UDim2.new(1, 0, 0, contentLayout.AbsoluteContentSize.Y + Config.Padding.Offset * 2)
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + Config.Padding.Offset * 2)
-    end)
+    local tabPadding = CreateInstance("UIPadding", {
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+        PaddingTop = UDim.new(0, 4),
+        PaddingBottom = UDim.new(0, 4),
+        Parent = tabScrollFrame
+    })
+    
+    -- Content container to hold tab pages
+    local contentContainer = CreateInstance("Frame", {
+        Name = "ContentContainer",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 36 + Config.TabHeight), -- Below tabs
+        Size = UDim2.new(1, 0, 1, -(36 + Config.TabHeight)),
+        ZIndex = 11,
+        ClipsDescendants = true,
+        Parent = window
+    })
     
     -- Make window draggable
     SetDraggable(window, titleBar)
@@ -297,7 +311,7 @@ function SimpluxUI:CreateWindow(title, size)
         Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, window.Position.Y.Scale, window.Position.Y.Offset - windowSize.Y.Offset/2)
     })
     
-    -- Minimize functionality
+    -- Minimize functionality - improved to maintain UI state
     local minimized = false
     local originalSize = windowSize
     
@@ -305,7 +319,7 @@ function SimpluxUI:CreateWindow(title, size)
         minimized = not minimized
         
         if minimized then
-            -- Store original size if needed
+            -- Store original size
             originalSize = window.Size
             
             -- Minimize animation
@@ -313,38 +327,39 @@ function SimpluxUI:CreateWindow(title, size)
                 Size = UDim2.new(0, windowSize.X.Offset, 0, 36)
             }, 0.3)
             
-            -- Hide scroll frame
-            Tween(scrollFrame, {
-                Transparency = 1
-            }, 0.2)
-            
-            wait(0.2)
-            scrollFrame.Visible = false
+            -- Hide content
+            contentContainer.Visible = false
+            tabContainer.Visible = false
             minimizeButton.Text = "+"
         else
-            -- Restore
-            scrollFrame.Visible = true
-            scrollFrame.Transparency = 1
-            
-            -- Maximize animation
+            -- Restore animation
             Tween(window, {
                 Size = originalSize
             }, 0.3)
             
-            -- Show content
-            Tween(scrollFrame, {
-                Transparency = 0
-            }, 0.2)
-            
+            -- Show content with slight delay to let animation start
+            wait(0.05)
+            contentContainer.Visible = true
+            tabContainer.Visible = true
             minimizeButton.Text = "-"
         end
     end)
     
+    -- Update tab layout size
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabScrollFrame.CanvasSize = UDim2.new(0, tabLayout.AbsoluteContentSize.X + 12, 0, 0)
+    end)
+    
+    local tabs = {}
+    local currentTab = nil
+    
     local windowObj = {
         Frame = window,
-        ContentFrame = contentFrame,
-        ScrollFrame = scrollFrame,
+        ContentContainer = contentContainer,
+        TabContainer = tabContainer,
+        TabScrollFrame = tabScrollFrame,
         Title = titleLabel,
+        Tabs = tabs,
         Elements = {},
         Minimized = function() return minimized end,
         SetMinimized = function(value)
@@ -354,24 +369,130 @@ function SimpluxUI:CreateWindow(title, size)
         end
     }
     
+    -- Create tab function
+    windowObj.CreateTab = function(tabName)
+        local tabButton = CreateInstance("TextButton", {
+            Name = "Tab_" .. tabName,
+            BackgroundColor3 = #tabs == 0 and Config.AccentColor or Config.SecondaryColor,
+            Size = UDim2.new(0, 0, 1, -8), -- Auto width
+            AutomaticSize = Enum.AutomaticSize.X,
+            ZIndex = 12,
+            Font = Config.Font,
+            Text = tabName,
+            TextColor3 = Config.TextColor,
+            TextSize = Config.TextSize,
+            Parent = tabScrollFrame
+        })
+        
+        ApplyRoundedCorners(tabButton)
+        
+        local tabPadding = CreateInstance("UIPadding", {
+            PaddingLeft = UDim.new(0, 10),
+            PaddingRight = UDim.new(0, 10),
+            Parent = tabButton
+        })
+        
+        -- Content frame for this tab
+        local scrollFrame = CreateInstance("ScrollingFrame", {
+            Name = "ScrollFrame_" .. tabName,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            ZIndex = 11,
+            ScrollBarThickness = 4,
+            ScrollBarImageColor3 = Config.AccentColor,
+            BorderSizePixel = 0,
+            Visible = #tabs == 0, -- First tab is visible by default
+            Parent = contentContainer
+        })
+        
+        local contentFrame = CreateInstance("Frame", {
+            Name = "Content",
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 1, 0),
+            ZIndex = 11,
+            AutomaticSize = Enum.AutomaticSize.Y,
+            Parent = scrollFrame
+        })
+        
+        local contentPadding = CreateInstance("UIPadding", {
+            PaddingBottom = Config.Padding,
+            PaddingLeft = Config.Padding,
+            PaddingRight = Config.Padding,
+            PaddingTop = Config.Padding,
+            Parent = contentFrame
+        })
+        
+        local contentLayout = CreateInstance("UIListLayout", {
+            Padding = UDim.new(0, 8),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Parent = contentFrame,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center -- Center all elements
+        })
+        
+        -- Auto-size the content frame
+        contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            contentFrame.Size = UDim2.new(1, 0, 0, contentLayout.AbsoluteContentSize.Y + Config.Padding.Offset * 2)
+            scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + Config.Padding.Offset * 2)
+        end)
+        
+        local tabObj = {
+            Button = tabButton,
+            ScrollFrame = scrollFrame,
+            ContentFrame = contentFrame,
+            Elements = {}
+        }
+        
+        -- Tab click event
+        tabButton.MouseButton1Click:Connect(function()
+            if currentTab ~= tabObj then
+                -- Update tab appearance
+                for _, tab in pairs(tabs) do
+                    Tween(tab.Button, {BackgroundColor3 = Config.SecondaryColor})
+                    tab.ScrollFrame.Visible = false
+                end
+                
+                Tween(tabButton, {BackgroundColor3 = Config.AccentColor})
+                scrollFrame.Visible = true
+                currentTab = tabObj
+            end
+        end)
+        
+        table.insert(tabs, tabObj)
+        
+        -- Set first tab as current
+        if #tabs == 1 then
+            currentTab = tabObj
+        end
+        
+        return tabObj
+    end
+    
+    -- Create a default tab if none exists
+    local defaultTab = windowObj.CreateTab("Default")
+    
     table.insert(self.Windows, windowObj)
     return windowObj
 end
 
 -- Create a button
 function SimpluxUI:CreateButton(window, text, callback)
+    local tab = window.Tabs[1] -- Default to first tab if no tab specified
+    if window.CreateTab then -- if window has tabs
+        tab = currentTab or window.Tabs[1]
+    end
+    
+    local contentFrame = tab and tab.ContentFrame or window.ContentFrame
+    
     local button = CreateInstance("TextButton", {
         Name = "Button",
         BackgroundColor3 = Config.SecondaryColor,
         Size = UDim2.new(Config.ButtonWidth.Scale, Config.ButtonWidth.Offset, 0, 36),
-        Position = UDim2.new(0.5, 0, 0, 0),
-        AnchorPoint = Vector2.new(0.5, 0),
         ZIndex = 12,
         Font = Config.Font,
         Text = text or "Button",
         TextColor3 = Config.TextColor,
         TextSize = Config.TextSize,
-        Parent = window.ContentFrame
+        Parent = contentFrame
     })
     
     ApplyRoundedCorners(button)
@@ -412,12 +533,19 @@ function SimpluxUI:CreateButton(window, text, callback)
         if callback then callback() end
     end)
     
-    table.insert(window.Elements, button)
+    table.insert(tab and tab.Elements or window.Elements, button)
     return button
 end
 
 -- Create a label
 function SimpluxUI:CreateLabel(window, text)
+    local tab = window.Tabs[1] -- Default to first tab if no tab specified
+    if window.CreateTab then -- if window has tabs
+        tab = currentTab or window.Tabs[1]
+    end
+    
+    local contentFrame = tab and tab.ContentFrame or window.ContentFrame
+    
     local label = CreateInstance("TextLabel", {
         Name = "Label",
         BackgroundTransparency = 1,
@@ -428,21 +556,28 @@ function SimpluxUI:CreateLabel(window, text)
         TextColor3 = Config.TextColor,
         TextSize = Config.TextSize,
         TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = window.ContentFrame
+        Parent = contentFrame
     })
     
-    table.insert(window.Elements, label)
+    table.insert(tab and tab.Elements or window.Elements, label)
     return label
 end
 
 -- Create a toggle
 function SimpluxUI:CreateToggle(window, text, default, callback)
+    local tab = window.Tabs[1] -- Default to first tab if no tab specified
+    if window.CreateTab then -- if window has tabs
+        tab = currentTab or window.Tabs[1]
+    end
+    
+    local contentFrame = tab and tab.ContentFrame or window.ContentFrame
+    
     local toggleContainer = CreateInstance("Frame", {
         Name = "ToggleContainer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 36),
+        Size = UDim2.new(Config.ButtonWidth.Scale, Config.ButtonWidth.Offset, 0, 36),
         ZIndex = 12,
-        Parent = window.ContentFrame
+        Parent = contentFrame
     })
     
     local toggleLabel = CreateInstance("TextLabel", {
@@ -483,6 +618,8 @@ function SimpluxUI:CreateToggle(window, text, default, callback)
     
     ApplyRoundedCorners(toggleCircle)
     
+    local toggled = default or false
+    
     local function UpdateToggle(value)
         local position = value and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 4, 0.5, 0)
         local color = value and Config.AccentColor or Config.SecondaryColor
@@ -493,8 +630,6 @@ function SimpluxUI:CreateToggle(window, text, default, callback)
         if callback then callback(value) end
     end
     
-    local toggled = default or false
-    
     toggleButton.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             toggled = not toggled
@@ -502,7 +637,7 @@ function SimpluxUI:CreateToggle(window, text, default, callback)
         end
     end)
     
-    table.insert(window.Elements, toggleContainer)
+    table.insert(tab and tab.Elements or window.Elements, toggleContainer)
     return {
         Container = toggleContainer,
         SetValue = function(value)
@@ -515,8 +650,15 @@ function SimpluxUI:CreateToggle(window, text, default, callback)
     }
 end
 
--- Create a slider
+-- Create a slider with improved smoothness
 function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
+    local tab = window.Tabs[1] -- Default to first tab if no tab specified
+    if window.CreateTab then -- if window has tabs
+        tab = currentTab or window.Tabs[1]
+    end
+    
+    local contentFrame = tab and tab.ContentFrame or window.ContentFrame
+    
     min = min or 0
     max = max or 100
     default = default or min
@@ -524,16 +666,16 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
     local sliderContainer = CreateInstance("Frame", {
         Name = "SliderContainer",
         BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 50),
+        Size = UDim2.new(Config.ButtonWidth.Scale, Config.ButtonWidth.Offset, 0, 50),
         ZIndex = 12,
-        Parent = window.ContentFrame
+        Parent = contentFrame
     })
     
     local sliderLabel = CreateInstance("TextLabel", {
         Name = "SliderLabel",
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 0),
-        Size = UDim2.new(1, 0, 0, 20),
+        Size = UDim2.new(1, -45, 0, 20), -- Make room for value label
         ZIndex = 12,
         Font = Config.Font,
         Text = text or "Slider",
@@ -546,11 +688,11 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
     local valueLabel = CreateInstance("TextLabel", {
         Name = "ValueLabel",
         BackgroundTransparency = 1,
-        Position = UDim2.new(1, -40, 0, 0),
-        Size = UDim2.new(0, 40, 0, 20),
+        Position = UDim2.new(1, -45, 0, 0),
+        Size = UDim2.new(0, 45, 0, 20),
         ZIndex = 12,
         Font = Config.Font,
-        Text = tostring(default),
+        Text = tostring(math.floor(default)),
         TextColor3 = Config.TextColor,
         TextSize = Config.TextSize,
         TextXAlignment = Enum.TextXAlignment.Right,
@@ -590,17 +732,28 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
     })
     
     ApplyRoundedCorners(sliderKnob)
+    ApplyShadow(sliderKnob, 0.7) -- Add shadow to knob for better visibility
     
     local currentValue = default
+    local userInputService = game:GetService("UserInputService")
+    local runService = game:GetService("RunService")
+    local dragging = false
+    local lastDragTime = 0
     
-    local function UpdateSlider(value)
+    local function UpdateSlider(value, skipTween)
         value = math.clamp(value, min, max)
         currentValue = value
         
         local position = (value - min) / (max - min)
         
-        sliderFill.Size = UDim2.new(position, 0, 1, 0)
-        sliderKnob.Position = UDim2.new(position, 0, 0.5, 0)
+        if skipTween then
+            sliderFill.Size = UDim2.new(position, 0, 1, 0)
+            sliderKnob.Position = UDim2.new(position, 0, 0.5, 0)
+        else
+            Tween(sliderFill, {Size = UDim2.new(position, 0, 1, 0)}, 0.1)
+            Tween(sliderKnob, {Position = UDim2.new(position, 0, 0.5, 0)}, 0.1)
+        end
+        
         valueLabel.Text = tostring(math.floor(value))
         
         if callback then callback(value) end
@@ -609,33 +762,54 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
     local function HandleSliderInput(input)
         local relativePos = math.clamp((input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
         local value = min + (max - min) * relativePos
-        UpdateSlider(value)
+        UpdateSlider(value, true) -- Use true for instant update
     end
     
-    local dragging = false
+    local connection
     
     sliderTrack.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             HandleSliderInput(input)
+            
+            -- Connect to RenderStepped for smoother tracking
+            if connection then connection:Disconnect() end
+            connection = runService.RenderStepped:Connect(function()
+                if dragging then
+                    local mousePos = userInputService:GetMouseLocation()
+                    local inputObj = {
+                        Position = Vector2.new(mousePos.X, mousePos.Y)
+                    }
+                    HandleSliderInput(inputObj)
+                end
+            end)
         end
     end)
     
     sliderTrack.InputEnded:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = false
+            if connection then
+                connection:Disconnect()
+                connection = nil
+            end
         end
     end)
     
-    game:GetService("UserInputService").InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-            HandleSliderInput(input)
+    -- Handle if mouse leaves the game window while dragging
+    userInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+            if connection then
+                connection:Disconnect()
+                connection = nil
+            end
         end
     end)
     
-    UpdateSlider(default)
+    UpdateSlider(default, true)
     
-    table.insert(window.Elements, sliderContainer)
+    table.insert(tab and tab.Elements or window.Elements, sliderContainer)
     return {
         Container = sliderContainer,
         SetValue = function(value)
@@ -645,6 +819,54 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
             return currentValue
         end
     }
+end
+
+-- Add tab creation function directly to the library
+function SimpluxUI:AddTab(window, tabName)
+    if window.CreateTab then
+        return window.CreateTab(tabName)
+    else
+        warn("This window does not support tabs")
+        return nil
+    end
+end
+
+-- Helper function to easily add elements to specific tabs
+function SimpluxUI:AddToTab(window, tabName, elementType, ...)
+    -- Find the tab by name
+    local targetTab = nil
+    for _, tab in pairs(window.Tabs or {}) do
+        if tab.Button.Text == tabName then
+            targetTab = tab
+            break
+        end
+    end
+    
+    if not targetTab then
+        targetTab = self:AddTab(window, tabName)
+        if not targetTab then return nil end
+    end
+    
+    -- Save current tab reference
+    local previousTab = currentTab
+    currentTab = targetTab
+    
+    -- Create the element
+    local element = nil
+    if elementType == "Button" then
+        element = self:CreateButton(window, ...)
+    elseif elementType == "Label" then
+        element = self:CreateLabel(window, ...)
+    elseif elementType == "Toggle" then
+        element = self:CreateToggle(window, ...)
+    elseif elementType == "Slider" then
+        element = self:CreateSlider(window, ...)
+    end
+    
+    -- Restore previous tab reference
+    currentTab = previousTab
+    
+    return element
 end
 
 -- Add to global environment if available (for backwards compatibility)
