@@ -1,0 +1,574 @@
+--[[
+    SimpluxUI Library v1.0
+    A lightweight UI library for Roblox with modern features
+    * Rounded elements
+    * Custom typography
+    * Draggable windows
+    * Shadows and glow effects
+    * Padding and proper spacing
+    * Smooth animations
+]]
+
+local SimpluxUI = {}
+SimpluxUI.__index = SimpluxUI
+
+-- Configuration
+local Config = {
+    Font = Enum.Font.GothamMedium,
+    TextSize = 14,
+    Padding = UDim.new(0, 10),
+    CornerRadius = UDim.new(0, 8),
+    PrimaryColor = Color3.fromRGB(41, 47, 54),
+    SecondaryColor = Color3.fromRGB(61, 67, 74),
+    AccentColor = Color3.fromRGB(86, 180, 255),
+    TextColor = Color3.fromRGB(240, 240, 240),
+    ShadowColor = Color3.fromRGB(0, 0, 0),
+    AnimationDuration = 0.2,
+    AnimationEasingStyle = Enum.EasingStyle.Quart,
+    AnimationEasingDirection = Enum.EasingDirection.Out
+}
+
+-- Utility Functions
+local function CreateInstance(className, properties)
+    local instance = Instance.new(className)
+    for prop, value in pairs(properties or {}) do
+        instance[prop] = value
+    end
+    return instance
+end
+
+local function Tween(instance, properties, duration, easingStyle, easingDirection)
+    local tweenInfo = TweenInfo.new(
+        duration or Config.AnimationDuration,
+        easingStyle or Config.AnimationEasingStyle,
+        easingDirection or Config.AnimationEasingDirection
+    )
+    local tween = game:GetService("TweenService"):Create(instance, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+local function ApplyRoundedCorners(frame)
+    local corner = CreateInstance("UICorner", {
+        CornerRadius = Config.CornerRadius,
+        Parent = frame
+    })
+    return corner
+end
+
+local function ApplyShadow(frame, transparency)
+    local shadow = CreateInstance("ImageLabel", {
+        Name = "Shadow",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.5, 0, 0.5, 4),
+        Size = UDim2.new(1, 8, 1, 8),
+        ZIndex = frame.ZIndex - 1,
+        Image = "rbxassetid://6014261993",
+        ImageColor3 = Config.ShadowColor,
+        ImageTransparency = transparency or 0.5,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        Parent = frame
+    })
+    return shadow
+end
+
+local function SetDraggable(frame, handle)
+    local UserInputService = game:GetService("UserInputService")
+    local dragging, dragInput, dragStart, startPos
+    
+    local function UpdateDrag()
+        if dragging then
+            local delta = dragInput.Position - dragStart
+            Tween(frame, {
+                Position = UDim2.new(
+                    startPos.X.Scale, 
+                    startPos.X.Offset + delta.X, 
+                    startPos.Y.Scale, 
+                    startPos.Y.Offset + delta.Y
+                )
+            }, 0.05)
+        end
+    end
+    
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    handle.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            UpdateDrag()
+        end
+    end)
+end
+
+-- Initialize the library
+function SimpluxUI.new(title, parent)
+    local screenGui = CreateInstance("ScreenGui", {
+        Name = "SimpluxUI",
+        ResetOnSpawn = false,
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        Parent = parent or game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    })
+    
+    local self = setmetatable({
+        GUI = screenGui,
+        Windows = {},
+        Elements = {}
+    }, SimpluxUI)
+    
+    if title then
+        self:CreateWindow(title)
+    end
+    
+    return self
+end
+
+-- Create a new window
+function SimpluxUI:CreateWindow(title, size)
+    local windowSize = size or UDim2.new(0, 350, 0, 250)
+    
+    local window = CreateInstance("Frame", {
+        Name = "Window",
+        BackgroundColor3 = Config.PrimaryColor,
+        Position = UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2),
+        Size = windowSize,
+        ZIndex = 10,
+        Parent = self.GUI
+    })
+    
+    ApplyRoundedCorners(window)
+    ApplyShadow(window)
+    
+    -- Title bar
+    local titleBar = CreateInstance("Frame", {
+        Name = "TitleBar",
+        BackgroundColor3 = Config.SecondaryColor,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = 11,
+        Parent = window
+    })
+    
+    local titleCorner = ApplyRoundedCorners(titleBar)
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    
+    local titleLabel = CreateInstance("TextLabel", {
+        Name = "Title",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 12, 0, 0),
+        Size = UDim2.new(1, -50, 1, 0),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = title or "SimpluxUI Window",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize + 2,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = titleBar
+    })
+    
+    -- Close button
+    local closeButton = CreateInstance("TextButton", {
+        Name = "CloseButton",
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 75, 75),
+        Position = UDim2.new(1, -8, 0.5, 0),
+        Size = UDim2.new(0, 22, 0, 22),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = "",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        Parent = titleBar
+    })
+    
+    ApplyRoundedCorners(closeButton)
+    
+    closeButton.MouseEnter:Connect(function()
+        Tween(closeButton, {BackgroundColor3 = Color3.fromRGB(255, 95, 95)})
+    end)
+    
+    closeButton.MouseLeave:Connect(function()
+        Tween(closeButton, {BackgroundColor3 = Color3.fromRGB(255, 75, 75)})
+    end)
+    
+    closeButton.MouseButton1Click:Connect(function()
+        Tween(window, {Size = UDim2.new(0, windowSize.X.Offset, 0, 0), Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, window.Position.Y.Scale, window.Position.Y.Offset + windowSize.Y.Offset/2)}, 0.3)
+        wait(0.3)
+        window:Destroy()
+    end)
+    
+    -- Content frame
+    local contentFrame = CreateInstance("Frame", {
+        Name = "Content",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 36),
+        Size = UDim2.new(1, 0, 1, -36),
+        ZIndex = 11,
+        Parent = window
+    })
+    
+    local contentPadding = CreateInstance("UIPadding", {
+        PaddingBottom = Config.Padding,
+        PaddingLeft = Config.Padding,
+        PaddingRight = Config.Padding,
+        PaddingTop = Config.Padding,
+        Parent = contentFrame
+    })
+    
+    local contentLayout = CreateInstance("UIListLayout", {
+        Padding = UDim.new(0, 8),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = contentFrame
+    })
+    
+    -- Make window draggable
+    SetDraggable(window, titleBar)
+    
+    -- Initial animation
+    window.Size = UDim2.new(0, windowSize.X.Offset, 0, 0)
+    window.Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, window.Position.Y.Scale, window.Position.Y.Offset + windowSize.Y.Offset/2)
+    
+    Tween(window, {
+        Size = windowSize,
+        Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, window.Position.Y.Scale, window.Position.Y.Offset - windowSize.Y.Offset/2)
+    })
+    
+    local windowObj = {
+        Frame = window,
+        ContentFrame = contentFrame,
+        Title = titleLabel,
+        Elements = {}
+    }
+    
+    table.insert(self.Windows, windowObj)
+    return windowObj
+end
+
+-- Create a button
+function SimpluxUI:CreateButton(window, text, callback)
+    local button = CreateInstance("TextButton", {
+        Name = "Button",
+        BackgroundColor3 = Config.SecondaryColor,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = text or "Button",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        Parent = window.ContentFrame
+    })
+    
+    ApplyRoundedCorners(button)
+    
+    -- Glow effect
+    local buttonGlow = CreateInstance("ImageLabel", {
+        Name = "Glow",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, 24, 1, 24),
+        ZIndex = 11,
+        Image = "rbxassetid://6014261993",
+        ImageColor3 = Config.AccentColor,
+        ImageTransparency = 0.9,
+        ScaleType = Enum.ScaleType.Slice,
+        SliceCenter = Rect.new(49, 49, 450, 450),
+        Parent = button
+    })
+    
+    -- Button effects
+    button.MouseEnter:Connect(function()
+        Tween(button, {BackgroundColor3 = Color3.fromRGB(71, 77, 84)})
+        Tween(buttonGlow, {ImageTransparency = 0.7})
+    end)
+    
+    button.MouseLeave:Connect(function()
+        Tween(button, {BackgroundColor3 = Config.SecondaryColor})
+        Tween(buttonGlow, {ImageTransparency = 0.9})
+    end)
+    
+    button.MouseButton1Down:Connect(function()
+        Tween(button, {Size = UDim2.new(0.98, 0, 0.96, 0), Position = UDim2.new(0.01, 0, 0.02, 0)}, 0.1)
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        Tween(button, {Size = UDim2.new(1, 0, 1, 0), Position = UDim2.new(0, 0, 0, 0)}, 0.1)
+        if callback then callback() end
+    end)
+    
+    table.insert(window.Elements, button)
+    return button
+end
+
+-- Create a label
+function SimpluxUI:CreateLabel(window, text)
+    local label = CreateInstance("TextLabel", {
+        Name = "Label",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 24),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = text or "Label",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = window.ContentFrame
+    })
+    
+    table.insert(window.Elements, label)
+    return label
+end
+
+-- Create a toggle
+function SimpluxUI:CreateToggle(window, text, default, callback)
+    local toggleContainer = CreateInstance("Frame", {
+        Name = "ToggleContainer",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 36),
+        ZIndex = 12,
+        Parent = window.ContentFrame
+    })
+    
+    local toggleLabel = CreateInstance("TextLabel", {
+        Name = "ToggleLabel",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, -50, 1, 0),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = text or "Toggle",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = toggleContainer
+    })
+    
+    local toggleButton = CreateInstance("Frame", {
+        Name = "ToggleButton",
+        AnchorPoint = Vector2.new(1, 0.5),
+        BackgroundColor3 = default and Config.AccentColor or Config.SecondaryColor,
+        Position = UDim2.new(1, 0, 0.5, 0),
+        Size = UDim2.new(0, 44, 0, 24),
+        ZIndex = 12,
+        Parent = toggleContainer
+    })
+    
+    ApplyRoundedCorners(toggleButton)
+    
+    local toggleCircle = CreateInstance("Frame", {
+        Name = "ToggleCircle",
+        AnchorPoint = Vector2.new(0, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Position = default and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 4, 0.5, 0),
+        Size = UDim2.new(0, 16, 0, 16),
+        ZIndex = 13,
+        Parent = toggleButton
+    })
+    
+    ApplyRoundedCorners(toggleCircle)
+    
+    local function UpdateToggle(value)
+        local position = value and UDim2.new(1, -20, 0.5, 0) or UDim2.new(0, 4, 0.5, 0)
+        local color = value and Config.AccentColor or Config.SecondaryColor
+        
+        Tween(toggleCircle, {Position = position})
+        Tween(toggleButton, {BackgroundColor3 = color})
+        
+        if callback then callback(value) end
+    end
+    
+    local toggled = default or false
+    
+    toggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            toggled = not toggled
+            UpdateToggle(toggled)
+        end
+    end)
+    
+    table.insert(window.Elements, toggleContainer)
+    return {
+        Container = toggleContainer,
+        SetValue = function(value)
+            toggled = value
+            UpdateToggle(toggled)
+        end,
+        GetValue = function()
+            return toggled
+        end
+    }
+end
+
+-- Create a slider
+function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
+    min = min or 0
+    max = max or 100
+    default = default or min
+    
+    local sliderContainer = CreateInstance("Frame", {
+        Name = "SliderContainer",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 0, 50),
+        ZIndex = 12,
+        Parent = window.ContentFrame
+    })
+    
+    local sliderLabel = CreateInstance("TextLabel", {
+        Name = "SliderLabel",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(1, 0, 0, 20),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = text or "Slider",
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = sliderContainer
+    })
+    
+    local valueLabel = CreateInstance("TextLabel", {
+        Name = "ValueLabel",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -40, 0, 0),
+        Size = UDim2.new(0, 40, 0, 20),
+        ZIndex = 12,
+        Font = Config.Font,
+        Text = tostring(default),
+        TextColor3 = Config.TextColor,
+        TextSize = Config.TextSize,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Parent = sliderContainer
+    })
+    
+    local sliderTrack = CreateInstance("Frame", {
+        Name = "SliderTrack",
+        BackgroundColor3 = Config.SecondaryColor,
+        Position = UDim2.new(0, 0, 0, 26),
+        Size = UDim2.new(1, 0, 0, 8),
+        ZIndex = 12,
+        Parent = sliderContainer
+    })
+    
+    ApplyRoundedCorners(sliderTrack)
+    
+    local sliderFill = CreateInstance("Frame", {
+        Name = "SliderFill",
+        BackgroundColor3 = Config.AccentColor,
+        Size = UDim2.new((default - min) / (max - min), 0, 1, 0),
+        ZIndex = 13,
+        Parent = sliderTrack
+    })
+    
+    local leftRounded = ApplyRoundedCorners(sliderFill)
+    leftRounded.CornerRadius = UDim.new(1, 0)
+    
+    local sliderKnob = CreateInstance("Frame", {
+        Name = "SliderKnob",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        Position = UDim2.new((default - min) / (max - min), 0, 0.5, 0),
+        Size = UDim2.new(0, 16, 0, 16),
+        ZIndex = 14,
+        Parent = sliderTrack
+    })
+    
+    ApplyRoundedCorners(sliderKnob)
+    
+    local currentValue = default
+    
+    local function UpdateSlider(value)
+        value = math.clamp(value, min, max)
+        currentValue = value
+        
+        local position = (value - min) / (max - min)
+        
+        sliderFill.Size = UDim2.new(position, 0, 1, 0)
+        sliderKnob.Position = UDim2.new(position, 0, 0.5, 0)
+        valueLabel.Text = tostring(math.floor(value))
+        
+        if callback then callback(value) end
+    end
+    
+    local function HandleSliderInput(input)
+        local relativePos = math.clamp((input.Position.X - sliderTrack.AbsolutePosition.X) / sliderTrack.AbsoluteSize.X, 0, 1)
+        local value = min + (max - min) * relativePos
+        UpdateSlider(value)
+    end
+    
+    local dragging = false
+    
+    sliderTrack.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            HandleSliderInput(input)
+        end
+    end)
+    
+    sliderTrack.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            HandleSliderInput(input)
+        end
+    end)
+    
+    UpdateSlider(default)
+    
+    table.insert(window.Elements, sliderContainer)
+    return {
+        Container = sliderContainer,
+        SetValue = function(value)
+            UpdateSlider(value)
+        end,
+        GetValue = function()
+            return currentValue
+        end
+    }
+end
+
+--[[
+    Example usage:
+    
+    local SimpluxUI = require(script.SimpluxUI)
+    local ui = SimpluxUI.new("My First UI")
+    
+    local mainWindow = ui:CreateWindow("SimpluxUI Demo", UDim2.new(0, 400, 0, 300))
+    
+    ui:CreateLabel(mainWindow, "Welcome to SimpluxUI!")
+    
+    ui:CreateButton(mainWindow, "Click Me!", function()
+        print("Button clicked!")
+    end)
+    
+    local toggle = ui:CreateToggle(mainWindow, "Enable Feature", false, function(value)
+        print("Toggle set to: " .. tostring(value))
+    end)
+    
+    local slider = ui:CreateSlider(mainWindow, "Brightness", 0, 100, 50, function(value)
+        print("Slider value: " .. value)
+    end)
+]]
+
+return SimpluxUI
