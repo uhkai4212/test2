@@ -1,5 +1,5 @@
 --[[
-    SimpluxUI Library v1.1
+    SimpluxUI Library v1.0
     A lightweight UI library for Roblox with modern features
     * Rounded elements
     * Custom typography
@@ -7,8 +7,6 @@
     * Shadows and glow effects
     * Padding and proper spacing
     * Smooth animations
-    * Scrolling support
-    * Minimizable windows
 ]]
 
 -- Create the main library object
@@ -28,8 +26,7 @@ local Config = {
     ShadowColor = Color3.fromRGB(0, 0, 0),
     AnimationDuration = 0.2,
     AnimationEasingStyle = Enum.EasingStyle.Quart,
-    AnimationEasingDirection = Enum.EasingDirection.Out,
-    ButtonWidth = UDim.new(0.8, 0) -- Default button width (80% of container)
+    AnimationEasingDirection = Enum.EasingDirection.Out
 }
 
 -- Utility Functions
@@ -155,7 +152,6 @@ function SimpluxUI:CreateWindow(title, size)
         Position = UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2),
         Size = windowSize,
         ZIndex = 10,
-        ClipsDescendants = true, -- This will ensure content is clipped to window bounds
         Parent = self.GUI
     })
     
@@ -178,7 +174,7 @@ function SimpluxUI:CreateWindow(title, size)
         Name = "Title",
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 12, 0, 0),
-        Size = UDim2.new(1, -84, 1, 0), -- Adjusted for minimize button
+        Size = UDim2.new(1, -50, 1, 0),
         ZIndex = 12,
         Font = Config.Font,
         Text = title or "SimpluxUI Window",
@@ -187,31 +183,6 @@ function SimpluxUI:CreateWindow(title, size)
         TextXAlignment = Enum.TextXAlignment.Left,
         Parent = titleBar
     })
-    
-    -- Minimize button
-    local minimizeButton = CreateInstance("TextButton", {
-        Name = "MinimizeButton",
-        AnchorPoint = Vector2.new(1, 0.5),
-        BackgroundColor3 = Config.AccentColor,
-        Position = UDim2.new(1, -38, 0.5, 0),
-        Size = UDim2.new(0, 22, 0, 22),
-        ZIndex = 12,
-        Font = Config.Font,
-        Text = "-",
-        TextColor3 = Config.TextColor,
-        TextSize = Config.TextSize + 2,
-        Parent = titleBar
-    })
-    
-    ApplyRoundedCorners(minimizeButton)
-    
-    minimizeButton.MouseEnter:Connect(function()
-        Tween(minimizeButton, {BackgroundColor3 = Color3.fromRGB(106, 200, 255)})
-    end)
-    
-    minimizeButton.MouseLeave:Connect(function()
-        Tween(minimizeButton, {BackgroundColor3 = Config.AccentColor})
-    end)
     
     -- Close button
     local closeButton = CreateInstance("TextButton", {
@@ -222,9 +193,9 @@ function SimpluxUI:CreateWindow(title, size)
         Size = UDim2.new(0, 22, 0, 22),
         ZIndex = 12,
         Font = Config.Font,
-        Text = "×",
+        Text = "",
         TextColor3 = Config.TextColor,
-        TextSize = Config.TextSize + 2,
+        TextSize = Config.TextSize,
         Parent = titleBar
     })
     
@@ -244,17 +215,13 @@ function SimpluxUI:CreateWindow(title, size)
         window:Destroy()
     end)
     
-    -- Scroll frame for content
-    local scrollFrame = CreateInstance("ScrollingFrame", {
-        Name = "ScrollFrame",
+    -- Content frame
+    local contentFrame = CreateInstance("Frame", {
+        Name = "Content",
         BackgroundTransparency = 1,
         Position = UDim2.new(0, 0, 0, 36),
         Size = UDim2.new(1, 0, 1, -36),
         ZIndex = 11,
-        CanvasSize = UDim2.new(0, 0, 0, 0), -- Will be auto-updated
-        ScrollBarThickness = 4,
-        ScrollBarImageColor3 = Config.AccentColor,
-        BorderSizePixel = 0,
         Parent = window
     })
     
@@ -263,19 +230,14 @@ function SimpluxUI:CreateWindow(title, size)
         PaddingLeft = Config.Padding,
         PaddingRight = Config.Padding,
         PaddingTop = Config.Padding,
-        Parent = scrollFrame
+        Parent = contentFrame
     })
     
     local contentLayout = CreateInstance("UIListLayout", {
         Padding = UDim.new(0, 8),
         SortOrder = Enum.SortOrder.LayoutOrder,
-        Parent = scrollFrame
+        Parent = contentFrame
     })
-    
-    -- Update canvas size based on content
-    contentLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        scrollFrame.CanvasSize = UDim2.new(0, 0, 0, contentLayout.AbsoluteContentSize.Y + Config.Padding.Offset*2)
-    end)
     
     -- Make window draggable
     SetDraggable(window, titleBar)
@@ -289,54 +251,11 @@ function SimpluxUI:CreateWindow(title, size)
         Position = UDim2.new(window.Position.X.Scale, window.Position.X.Offset, window.Position.Y.Scale, window.Position.Y.Offset - windowSize.Y.Offset/2)
     })
     
-    -- Window minimization state
-    local isMinimized = false
-    local originalSize = windowSize
-    
-    minimizeButton.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        
-        if isMinimized then
-            -- Save current size if it's not minimized
-            originalSize = window.Size
-            
-            -- Minimize animation
-            Tween(window, {
-                Size = UDim2.new(windowSize.X.Scale, windowSize.X.Offset, 0, 36)
-            }, 0.3)
-            
-            -- Update button text
-            minimizeButton.Text = "+"
-            
-            -- Hide the scrollFrame
-            scrollFrame.Visible = false
-        else
-            -- Restore animation
-            Tween(window, {
-                Size = originalSize
-            }, 0.3)
-            
-            -- Update button text
-            minimizeButton.Text = "-"
-            
-            -- Show the scrollFrame
-            scrollFrame.Visible = true
-        end
-    end)
-    
     local windowObj = {
         Frame = window,
-        ContentFrame = scrollFrame, -- Changed from contentFrame to scrollFrame
+        ContentFrame = contentFrame,
         Title = titleLabel,
-        Elements = {},
-        IsMinimized = function()
-            return isMinimized
-        },
-        Minimize = function(value)
-            if value ~= isMinimized then
-                minimizeButton.MouseButton1Click:Fire()
-            end
-        }
+        Elements = {}
     }
     
     table.insert(self.Windows, windowObj)
@@ -348,9 +267,7 @@ function SimpluxUI:CreateButton(window, text, callback)
     local button = CreateInstance("TextButton", {
         Name = "Button",
         BackgroundColor3 = Config.SecondaryColor,
-        Size = UDim2.new(Config.ButtonWidth.Scale, Config.ButtonWidth.Offset, 0, 32), -- Smaller height and custom width
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 0, 0),
+        Size = UDim2.new(1, 0, 0, 36),
         ZIndex = 12,
         Font = Config.Font,
         Text = text or "Button",
@@ -630,53 +547,6 @@ function SimpluxUI:CreateSlider(window, text, min, max, default, callback)
             return currentValue
         end
     }
-end
-
--- Create a section (useful for organizing UI)
-function SimpluxUI:CreateSection(window, title)
-    local sectionContainer = CreateInstance("Frame", {
-        Name = "SectionContainer",
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1, 0, 0, 30),
-        ZIndex = 12,
-        Parent = window.ContentFrame
-    })
-    
-    local sectionLine = CreateInstance("Frame", {
-        Name = "SectionLine",
-        BackgroundColor3 = Config.AccentColor,
-        Position = UDim2.new(0, 0, 0.5, 0),
-        Size = UDim2.new(1, 0, 0, 1),
-        ZIndex = 12,
-        Parent = sectionContainer
-    })
-    
-    local sectionLabel = CreateInstance("TextLabel", {
-        Name = "SectionLabel",
-        BackgroundColor3 = Config.PrimaryColor,
-        BackgroundTransparency = 0,
-        Position = UDim2.new(0, 10, 0, 0),
-        Size = UDim2.new(0, 0, 1, 0), -- Auto size based on text
-        ZIndex = 13,
-        Font = Config.Font,
-        Text = " " .. (title or "Section") .. " ",
-        TextColor3 = Config.TextColor,
-        TextSize = Config.TextSize,
-        AutomaticSize = Enum.AutomaticSize.X,
-        Parent = sectionContainer
-    })
-    
-    table.insert(window.Elements, sectionContainer)
-    return sectionContainer
-end
-
--- Set the button width for the UI
-function SimpluxUI:SetButtonWidth(width)
-    if type(width) == "number" then
-        Config.ButtonWidth = UDim.new(0, width)
-    else
-        Config.ButtonWidth = width
-    end
 end
 
 -- Add to global environment if available (for backwards compatibility)
