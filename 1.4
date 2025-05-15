@@ -21,7 +21,7 @@ local BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25)  -- Dark Gray
 local TEXT_COLOR = Color3.fromRGB(255, 255, 255)  -- White
 local BUTTON_COLOR = Color3.fromRGB(45, 45, 45)  -- Slightly lighter gray
 
--- Create UI
+-- Create a new instance of the UI
 function BloxByte.new(title)
     local self = setmetatable({}, BloxByte)
     
@@ -163,10 +163,17 @@ function BloxByte.new(title)
     dropdownButton.MouseButton1Click:Connect(function()
         isVisible = not isVisible
         if isVisible then
+            -- Show content
+            contentFrame.Visible = true
             mainFrame:TweenSize(UDim2.new(0, 250, 0, 300), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
             dropdownButton.Rotation = 0
         else
-            mainFrame:TweenSize(UDim2.new(0, 250, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+            -- Hide content and minimize
+            mainFrame:TweenSize(UDim2.new(0, 250, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true, function()
+                if not isVisible then
+                    contentFrame.Visible = false
+                end
+            end)
             dropdownButton.Rotation = 180
         end
     end)
@@ -263,9 +270,24 @@ function BloxByte:AddToggle(name, defaultState, callback)
         self.callbacks[name](isOn)
     end
     
-    -- Make the toggle clickable
+    -- Make the entire button area clickable
     toggleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isOn = not isOn
+            updateToggle()
+        end
+    end)
+    
+    -- Also make the toggle background and knob clickable
+    toggleBackground.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isOn = not isOn
+            updateToggle()
+        end
+    end)
+    
+    toggleKnob.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             isOn = not isOn
             updateToggle()
         end
