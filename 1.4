@@ -1,0 +1,374 @@
+--[[
+    BloxByte UI Library
+    A simple, customizable UI library for Roblox games
+    Inspired by SpineWare UI design
+]]
+
+local BloxByte = {}
+BloxByte.__index = BloxByte
+
+-- Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- Constants
+local TWEEN_SPEED = 0.15
+local TOGGLE_COLOR_ON = Color3.fromRGB(100, 255, 0)  -- Bright Green
+local TOGGLE_COLOR_OFF = Color3.fromRGB(255, 255, 255)  -- White
+local BACKGROUND_COLOR = Color3.fromRGB(25, 25, 25)  -- Dark Gray
+local TEXT_COLOR = Color3.fromRGB(255, 255, 255)  -- White
+local BUTTON_COLOR = Color3.fromRGB(45, 45, 45)  -- Slightly lighter gray
+
+-- Create UI
+function BloxByte.new(title)
+    local self = setmetatable({}, BloxByte)
+    
+    -- Create ScreenGui
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BloxByteUI"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    -- Parent the ScreenGui properly
+    if syn and syn.protect_gui then
+        syn.protect_gui(screenGui)
+        screenGui.Parent = game.CoreGui
+    elseif gethui then
+        screenGui.Parent = gethui()
+    else
+        screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    end
+    
+    -- Create main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Size = UDim2.new(0, 250, 0, 300)
+    mainFrame.Position = UDim2.new(0.5, -125, 0.5, -150)
+    mainFrame.BackgroundColor3 = BACKGROUND_COLOR
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Active = true
+    mainFrame.Draggable = false  -- We'll implement custom dragging
+    mainFrame.Parent = screenGui
+    
+    -- Round the corners
+    local uiCorner = Instance.new("UICorner")
+    uiCorner.CornerRadius = UDim.new(0, 8)
+    uiCorner.Parent = mainFrame
+    
+    -- Create title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Size = UDim2.new(1, 0, 0, 35)
+    titleBar.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    titleBar.BorderSizePixel = 0
+    titleBar.Parent = mainFrame
+    
+    -- Round the top corners of title bar
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 8)
+    titleCorner.Parent = titleBar
+    
+    -- Create title text
+    local titleText = Instance.new("TextLabel")
+    titleText.Name = "Title"
+    titleText.Text = title or "BloxByte"
+    titleText.Size = UDim2.new(1, -10, 1, 0)
+    titleText.Position = UDim2.new(0, 10, 0, 0)
+    titleText.BackgroundTransparency = 1
+    titleText.TextColor3 = TEXT_COLOR
+    titleText.TextSize = 16
+    titleText.Font = Enum.Font.GothamBold
+    titleText.TextXAlignment = Enum.TextXAlignment.Left
+    titleText.Parent = titleBar
+    
+    -- Create dropdown button
+    local dropdownButton = Instance.new("ImageButton")
+    dropdownButton.Name = "DropdownButton"
+    dropdownButton.Size = UDim2.new(0, 20, 0, 20)
+    dropdownButton.Position = UDim2.new(1, -25, 0.5, -10)
+    dropdownButton.BackgroundTransparency = 1
+    dropdownButton.Image = "rbxassetid://6031091004"  -- Dropdown arrow
+    dropdownButton.Parent = titleBar
+    
+    -- Content container
+    local contentFrame = Instance.new("Frame")
+    contentFrame.Name = "ContentFrame"
+    contentFrame.Size = UDim2.new(1, -20, 1, -45)
+    contentFrame.Position = UDim2.new(0, 10, 0, 40)
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Parent = mainFrame
+    
+    -- Create ScrollingFrame for content
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "ScrollFrame"
+    scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(75, 75, 75)
+    scrollFrame.Parent = contentFrame
+    
+    -- Auto-layout for buttons
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Padding = UDim.new(0, 8)
+    listLayout.Parent = scrollFrame
+    
+    -- Make the main frame draggable
+    local isDragging = false
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        mainFrame.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+    
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    isDragging = false
+                end
+            end)
+        end
+    end)
+    
+    titleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and isDragging then
+            updateInput(input)
+        end
+    end)
+    
+    -- Toggle visibility
+    local isVisible = true
+    dropdownButton.MouseButton1Click:Connect(function()
+        isVisible = not isVisible
+        if isVisible then
+            mainFrame:TweenSize(UDim2.new(0, 250, 0, 300), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+            dropdownButton.Rotation = 0
+        else
+            mainFrame:TweenSize(UDim2.new(0, 250, 0, 35), Enum.EasingDirection.Out, Enum.EasingStyle.Quart, 0.3, true)
+            dropdownButton.Rotation = 180
+        end
+    end)
+    
+    -- Store UI elements
+    self.screenGui = screenGui
+    self.mainFrame = mainFrame
+    self.contentFrame = contentFrame
+    self.scrollFrame = scrollFrame
+    self.callbacks = {}
+    self.buttonCount = 0
+    
+    return self
+end
+
+-- Add a toggle button
+function BloxByte:AddToggle(name, defaultState, callback)
+    self.buttonCount = self.buttonCount + 1
+    
+    -- Create button container
+    local toggleButton = Instance.new("Frame")
+    toggleButton.Name = name .. "Toggle"
+    toggleButton.Size = UDim2.new(1, 0, 0, 40)
+    toggleButton.BackgroundColor3 = BUTTON_COLOR
+    toggleButton.BorderSizePixel = 0
+    toggleButton.LayoutOrder = self.buttonCount
+    
+    -- Round the corners
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = toggleButton
+    
+    -- Create button text
+    local buttonText = Instance.new("TextLabel")
+    buttonText.Name = "ButtonText"
+    buttonText.Text = name
+    buttonText.Size = UDim2.new(0.7, 0, 1, 0)
+    buttonText.BackgroundTransparency = 1
+    buttonText.TextColor3 = TEXT_COLOR
+    buttonText.TextSize = 16
+    buttonText.Font = Enum.Font.Gotham
+    buttonText.TextXAlignment = Enum.TextXAlignment.Left
+    buttonText.Position = UDim2.new(0, 15, 0, 0)
+    buttonText.Parent = toggleButton
+    
+    -- Create toggle switch background
+    local toggleBackground = Instance.new("Frame")
+    toggleBackground.Name = "ToggleBackground"
+    toggleBackground.Size = UDim2.new(0, 40, 0, 20)
+    toggleBackground.Position = UDim2.new(1, -50, 0.5, -10)
+    toggleBackground.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    toggleBackground.BorderSizePixel = 0
+    toggleBackground.Parent = toggleButton
+    
+    -- Round the toggle background
+    local toggleBgCorner = Instance.new("UICorner")
+    toggleBgCorner.CornerRadius = UDim.new(1, 0)
+    toggleBgCorner.Parent = toggleBackground
+    
+    -- Create toggle switch knob
+    local toggleKnob = Instance.new("Frame")
+    toggleKnob.Name = "ToggleKnob"
+    toggleKnob.Size = UDim2.new(0, 16, 0, 16)
+    toggleKnob.Position = UDim2.new(0, 2, 0.5, -8)
+    toggleKnob.BackgroundColor3 = TOGGLE_COLOR_OFF
+    toggleKnob.BorderSizePixel = 0
+    toggleKnob.Parent = toggleBackground
+    
+    -- Round the toggle knob
+    local knobCorner = Instance.new("UICorner")
+    knobCorner.CornerRadius = UDim.new(1, 0)
+    knobCorner.Parent = toggleKnob
+    
+    -- Set default state
+    local isOn = defaultState or false
+    self.callbacks[name] = callback or function() end
+    
+    -- Update toggle appearance based on state
+    local function updateToggle()
+        local onPosition = UDim2.new(1, -18, 0.5, -8)
+        local offPosition = UDim2.new(0, 2, 0.5, -8)
+        local targetPosition = isOn and onPosition or offPosition
+        local targetColor = isOn and TOGGLE_COLOR_ON or TOGGLE_COLOR_OFF
+        
+        -- Animate the toggle
+        local positionTween = TweenService:Create(
+            toggleKnob, 
+            TweenInfo.new(TWEEN_SPEED, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {Position = targetPosition, BackgroundColor3 = targetColor}
+        )
+        positionTween:Play()
+        
+        -- Call the callback
+        self.callbacks[name](isOn)
+    end
+    
+    -- Make the toggle clickable
+    toggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isOn = not isOn
+            updateToggle()
+        end
+    end)
+    
+    -- Set initial state
+    if isOn then
+        toggleKnob.Position = UDim2.new(1, -18, 0.5, -8)
+        toggleKnob.BackgroundColor3 = TOGGLE_COLOR_ON
+    end
+    
+    toggleButton.Parent = self.scrollFrame
+    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    
+    -- Return functions to control the toggle
+    return {
+        SetState = function(state)
+            if isOn ~= state then
+                isOn = state
+                updateToggle()
+            end
+        end,
+        GetState = function()
+            return isOn
+        end
+    }
+end
+
+-- Add a button
+function BloxByte:AddButton(name, callback)
+    self.buttonCount = self.buttonCount + 1
+    
+    -- Create button
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(1, 0, 0, 40)
+    button.BackgroundColor3 = BUTTON_COLOR
+    button.BorderSizePixel = 0
+    button.Text = name
+    button.TextColor3 = TEXT_COLOR
+    button.TextSize = 16
+    button.Font = Enum.Font.Gotham
+    button.LayoutOrder = self.buttonCount
+    
+    -- Round the corners
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = button
+    
+    -- Add click animation
+    button.MouseButton1Down:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundColor3 = Color3.fromRGB(35, 35, 35)}
+        ):Play()
+    end)
+    
+    button.MouseButton1Up:Connect(function()
+        TweenService:Create(
+            button,
+            TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+            {BackgroundColor3 = BUTTON_COLOR}
+        ):Play()
+        
+        if callback then
+            callback()
+        end
+    end)
+    
+    button.Parent = self.scrollFrame
+    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    
+    return button
+end
+
+-- Add a section
+function BloxByte:AddSection(name)
+    self.buttonCount = self.buttonCount + 1
+    
+    -- Create section label
+    local sectionLabel = Instance.new("TextLabel")
+    sectionLabel.Name = name .. "Section"
+    sectionLabel.Size = UDim2.new(1, 0, 0, 30)
+    sectionLabel.BackgroundTransparency = 1
+    sectionLabel.Text = name
+    sectionLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
+    sectionLabel.TextSize = 14
+    sectionLabel.Font = Enum.Font.GothamBold
+    sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
+    sectionLabel.LayoutOrder = self.buttonCount
+    
+    sectionLabel.Parent = self.scrollFrame
+    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    
+    return sectionLabel
+end
+
+-- Destroy the UI
+function BloxByte:Destroy()
+    if self.screenGui then
+        self.screenGui:Destroy()
+    end
+end
+
+return BloxByte
