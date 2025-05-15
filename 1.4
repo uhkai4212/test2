@@ -132,8 +132,8 @@ function BloxByte.new(title)
     self.tabs = {}
     self.currentTabFrame = nil
     
-    -- Make the title bar draggable by default
-    self:MakeDraggable(titleBar, mainFrame)
+    -- We'll implement dragging with click detection for the title bar
+    self:MakeDraggableWithClickDetection(titleBar, mainFrame)
     
     -- Toggle visibility
     local isVisible = true
@@ -155,16 +155,7 @@ function BloxByte.new(title)
         end
     end)
     
-    -- Title click to switch tabs functionality
-    titleText.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            -- Show textbox
-            titleText.Visible = false
-            titleTextbox.Text = ""
-            titleTextbox.Visible = true
-            titleTextbox:CaptureFocus()
-        end
-    end)
+    -- Title click to switch tabs functionality has been moved to MakeDraggableWithClickDetection
     
     -- Handle textbox focus lost (tab selection)
     titleTextbox.FocusLost:Connect(function(enterPressed)
@@ -230,7 +221,83 @@ function BloxByte:MakeDraggable(dragElement, targetElement)
     end)
     
     return dragElement
+end with click detection
+function BloxByte:MakeDraggableWithClickDetection(dragElement, targetElement)
+    local isDragging = false
+    local dragInput
+    local dragStart
+    local startPos
+    local clickThreshold = 5 -- Pixels of movement required to be considered a drag
+    local clickStartPosition = nil
+    local dragStartTime = nil
+    local clickTimeThreshold = 0.3 -- Seconds
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        targetElement.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+    
+    -- Access titleText and titleTextbox
+    local titleText = self.titleText
+    local titleTextbox = self.titleTextbox
+    
+    dragElement.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            clickStartPosition = input.Position
+            dragStartTime = tick()
+            isDragging = false -- Start by assuming it's a click, not a drag
+            dragStart = input.Position
+            startPos = targetElement.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    -- If ended quickly with minimal movement, consider it a click
+                    local dragDistance = (input.Position - clickStartPosition).Magnitude
+                    local dragDuration = tick() - dragStartTime
+                    
+                    if dragDistance < clickThreshold and dragDuration < clickTimeThreshold then
+                        -- This was a click, not a drag - open the textbox
+                        titleText.Visible = false
+                        titleTextbox.Text = ""
+                        titleTextbox.Visible = true
+                        titleTextbox:CaptureFocus()
+                    end
+                    
+                    isDragging = false
+                    clickStartPosition = nil
+                end
+            end)
+        end
+    end)
+    
+    dragElement.InputChanged:Connect(function(input)
+        if (input.UserInputType == Enum.UserInputType.MouseMovement or 
+            input.UserInputType == Enum.UserInputType.Touch) and clickStartPosition then
+            
+            -- Check if movement is enough to consider it a drag
+            local dragDistance = (input.Position - clickStartPosition).Magnitude
+            if dragDistance > clickThreshold then
+                isDragging = true
+                dragInput = input
+            end
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and isDragging then
+            updateInput(input)
+        end
+    end)
+    
+    return dragElement
 end
+
+-- Make a UI element draggable
 
 -- Add a tab
 function BloxByte:AddTab(tabName)
