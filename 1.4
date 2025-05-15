@@ -2,6 +2,8 @@
     BloxByte UI Library
     A simple, customizable UI library for Roblox games
     Inspired by SpineWare UI design
+    
+    Now with tab functionality!
 ]]
 
 local BloxByte = {}
@@ -70,7 +72,7 @@ function BloxByte.new(title)
     titleCorner.CornerRadius = UDim.new(0, 8)
     titleCorner.Parent = titleBar
     
-    -- Create title text
+    -- Create title text label (will be shown normally)
     local titleText = Instance.new("TextLabel")
     titleText.Name = "Title"
     titleText.Text = title or "BloxByte"
@@ -82,6 +84,22 @@ function BloxByte.new(title)
     titleText.Font = Enum.Font.GothamBold
     titleText.TextXAlignment = Enum.TextXAlignment.Left
     titleText.Parent = titleBar
+    
+    -- Create title textbox (will be hidden initially)
+    local titleTextbox = Instance.new("TextBox")
+    titleTextbox.Name = "TitleTextbox"
+    titleTextbox.Text = title or "BloxByte"
+    titleTextbox.Size = UDim2.new(1, -10, 1, 0)
+    titleTextbox.Position = UDim2.new(0, 10, 0, 0)
+    titleTextbox.BackgroundTransparency = 1
+    titleTextbox.TextColor3 = TEXT_COLOR
+    titleTextbox.TextSize = 16
+    titleTextbox.Font = Enum.Font.GothamBold
+    titleTextbox.TextXAlignment = Enum.TextXAlignment.Left
+    titleTextbox.PlaceholderText = "Type tab name..."
+    titleTextbox.Visible = false
+    titleTextbox.ClearTextOnFocus = true
+    titleTextbox.Parent = titleBar
     
     -- Create dropdown button
     local dropdownButton = Instance.new("ImageButton")
@@ -100,21 +118,18 @@ function BloxByte.new(title)
     contentFrame.BackgroundTransparency = 1
     contentFrame.Parent = mainFrame
     
-    -- Create ScrollingFrame for content
-    local scrollFrame = Instance.new("ScrollingFrame")
-    scrollFrame.Name = "ScrollFrame"
-    scrollFrame.Size = UDim2.new(1, 0, 1, 0)
-    scrollFrame.BackgroundTransparency = 1
-    scrollFrame.BorderSizePixel = 0
-    scrollFrame.ScrollBarThickness = 4
-    scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(75, 75, 75)
-    scrollFrame.Parent = contentFrame
+    -- Store UI elements
+    self.screenGui = screenGui
+    self.mainFrame = mainFrame
+    self.contentFrame = contentFrame
+    self.titleText = titleText
+    self.titleTextbox = titleTextbox
+    self.currentTab = title or "Main"
+    self.callbacks = {}
     
-    -- Auto-layout for buttons
-    local listLayout = Instance.new("UIListLayout")
-    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    listLayout.Padding = UDim.new(0, 8)
-    listLayout.Parent = scrollFrame
+    -- Tabs system
+    self.tabs = {}
+    self.currentTabFrame = nil
     
     -- Make the main frame draggable
     local isDragging = false
@@ -178,20 +193,116 @@ function BloxByte.new(title)
         end
     end)
     
-    -- Store UI elements
-    self.screenGui = screenGui
-    self.mainFrame = mainFrame
-    self.contentFrame = contentFrame
-    self.scrollFrame = scrollFrame
-    self.callbacks = {}
-    self.buttonCount = 0
+    -- Title click to switch tabs functionality
+    titleText.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            -- Show textbox
+            titleText.Visible = false
+            titleTextbox.Text = ""
+            titleTextbox.Visible = true
+            titleTextbox:CaptureFocus()
+        end
+    end)
+    
+    -- Handle textbox focus lost (tab selection)
+    titleTextbox.FocusLost:Connect(function(enterPressed)
+        if enterPressed then
+            local tabName = titleTextbox.Text
+            if tabName ~= "" then
+                self:SwitchTab(tabName)
+            end
+        end
+        
+        -- Switch back to text label
+        titleTextbox.Visible = false
+        titleText.Visible = true
+    end)
+    
+    -- Create the first tab
+    self:AddTab(self.currentTab)
     
     return self
 end
 
--- Add a toggle button
-function BloxByte:AddToggle(name, defaultState, callback)
-    self.buttonCount = self.buttonCount + 1
+-- Add a tab
+function BloxByte:AddTab(tabName)
+    if self.tabs[tabName] then
+        return self.tabs[tabName]
+    end
+    
+    -- Create tab container
+    local tabFrame = Instance.new("Frame")
+    tabFrame.Name = tabName .. "Tab"
+    tabFrame.Size = UDim2.new(1, 0, 1, 0)
+    tabFrame.BackgroundTransparency = 1
+    tabFrame.Visible = false
+    tabFrame.Parent = self.contentFrame
+    
+    -- Create ScrollingFrame for content
+    local scrollFrame = Instance.new("ScrollingFrame")
+    scrollFrame.Name = "ScrollFrame"
+    scrollFrame.Size = UDim2.new(1, 0, 1, 0)
+    scrollFrame.BackgroundTransparency = 1
+    scrollFrame.BorderSizePixel = 0
+    scrollFrame.ScrollBarThickness = 4
+    scrollFrame.ScrollBarImageColor3 = Color3.fromRGB(75, 75, 75)
+    scrollFrame.Parent = tabFrame
+    
+    -- Auto-layout for buttons
+    local listLayout = Instance.new("UIListLayout")
+    listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    listLayout.Padding = UDim.new(0, 8)
+    listLayout.Parent = scrollFrame
+    
+    -- Create tab data
+    local tab = {
+        frame = tabFrame,
+        scrollFrame = scrollFrame,
+        buttonCount = 0
+    }
+    
+    self.tabs[tabName] = tab
+    
+    -- If this is the first tab or matches current tab name, show it
+    if not self.currentTabFrame or tabName == self.currentTab then
+        self:SwitchTab(tabName)
+    end
+    
+    return tab
+end
+
+-- Switch to a tab
+function BloxByte:SwitchTab(tabName)
+    -- Create tab if it doesn't exist
+    if not self.tabs[tabName] then
+        self:AddTab(tabName)
+    end
+    
+    -- Hide current tab
+    if self.currentTabFrame then
+        self.currentTabFrame.Visible = false
+    end
+    
+    -- Show new tab
+    self.currentTabFrame = self.tabs[tabName].frame
+    self.currentTabFrame.Visible = true
+    self.currentTab = tabName
+    
+    -- Update title text
+    self.titleText.Text = tabName
+    
+    return self.tabs[tabName]
+end
+
+-- Get current tab
+function BloxByte:GetCurrentTab()
+    return self.tabs[self.currentTab]
+end
+
+-- Add a toggle button to a specific tab
+function BloxByte:AddToggle(name, defaultState, callback, tabName)
+    local tab = tabName and self:AddTab(tabName) or self:GetCurrentTab()
+    tab.buttonCount = tab.buttonCount + 1
     
     -- Create button container
     local toggleButton = Instance.new("Frame")
@@ -199,7 +310,7 @@ function BloxByte:AddToggle(name, defaultState, callback)
     toggleButton.Size = UDim2.new(1, 0, 0, 40)
     toggleButton.BackgroundColor3 = BUTTON_COLOR
     toggleButton.BorderSizePixel = 0
-    toggleButton.LayoutOrder = self.buttonCount
+    toggleButton.LayoutOrder = tab.buttonCount
     
     -- Round the corners
     local btnCorner = Instance.new("UICorner")
@@ -249,7 +360,8 @@ function BloxByte:AddToggle(name, defaultState, callback)
     
     -- Set default state
     local isOn = defaultState or false
-    self.callbacks[name] = callback or function() end
+    local callbackKey = tabName and (tabName .. "_" .. name) or name
+    self.callbacks[callbackKey] = callback or function() end
     
     -- Update toggle appearance based on state
     local function updateToggle()
@@ -267,7 +379,7 @@ function BloxByte:AddToggle(name, defaultState, callback)
         positionTween:Play()
         
         -- Call the callback
-        self.callbacks[name](isOn)
+        self.callbacks[callbackKey](isOn)
     end
     
     -- Make the entire button area clickable
@@ -299,8 +411,8 @@ function BloxByte:AddToggle(name, defaultState, callback)
         toggleKnob.BackgroundColor3 = TOGGLE_COLOR_ON
     end
     
-    toggleButton.Parent = self.scrollFrame
-    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    toggleButton.Parent = tab.scrollFrame
+    tab.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, tab.buttonCount * 48)
     
     -- Return functions to control the toggle
     return {
@@ -316,9 +428,10 @@ function BloxByte:AddToggle(name, defaultState, callback)
     }
 end
 
--- Add a button
-function BloxByte:AddButton(name, callback)
-    self.buttonCount = self.buttonCount + 1
+-- Add a button to a specific tab
+function BloxByte:AddButton(name, callback, tabName)
+    local tab = tabName and self:AddTab(tabName) or self:GetCurrentTab()
+    tab.buttonCount = tab.buttonCount + 1
     
     -- Create button
     local button = Instance.new("TextButton")
@@ -330,7 +443,7 @@ function BloxByte:AddButton(name, callback)
     button.TextColor3 = TEXT_COLOR
     button.TextSize = 16
     button.Font = Enum.Font.Gotham
-    button.LayoutOrder = self.buttonCount
+    button.LayoutOrder = tab.buttonCount
     
     -- Round the corners
     local btnCorner = Instance.new("UICorner")
@@ -358,15 +471,16 @@ function BloxByte:AddButton(name, callback)
         end
     end)
     
-    button.Parent = self.scrollFrame
-    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    button.Parent = tab.scrollFrame
+    tab.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, tab.buttonCount * 48)
     
     return button
 end
 
--- Add a section
-function BloxByte:AddSection(name)
-    self.buttonCount = self.buttonCount + 1
+-- Add a section to a specific tab
+function BloxByte:AddSection(name, tabName)
+    local tab = tabName and self:AddTab(tabName) or self:GetCurrentTab()
+    tab.buttonCount = tab.buttonCount + 1
     
     -- Create section label
     local sectionLabel = Instance.new("TextLabel")
@@ -378,10 +492,10 @@ function BloxByte:AddSection(name)
     sectionLabel.TextSize = 14
     sectionLabel.Font = Enum.Font.GothamBold
     sectionLabel.TextXAlignment = Enum.TextXAlignment.Left
-    sectionLabel.LayoutOrder = self.buttonCount
+    sectionLabel.LayoutOrder = tab.buttonCount
     
-    sectionLabel.Parent = self.scrollFrame
-    self.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, self.buttonCount * 48)
+    sectionLabel.Parent = tab.scrollFrame
+    tab.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, tab.buttonCount * 48)
     
     return sectionLabel
 end
