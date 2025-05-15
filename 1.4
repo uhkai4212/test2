@@ -221,7 +221,9 @@ function BloxByte:MakeDraggable(dragElement, targetElement)
     end)
     
     return dragElement
-end with click detection
+end
+
+-- Make a UI element draggable with click detection
 function BloxByte:MakeDraggableWithClickDetection(dragElement, targetElement)
     local isDragging = false
     local dragInput
@@ -296,8 +298,6 @@ function BloxByte:MakeDraggableWithClickDetection(dragElement, targetElement)
     
     return dragElement
 end
-
--- Make a UI element draggable
 
 -- Add a tab
 function BloxByte:AddTab(tabName)
