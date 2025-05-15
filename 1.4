@@ -4,6 +4,7 @@
     Inspired by SpineWare UI design
     
     Now with tab functionality!
+    Modified with custom draggable elements capability
 ]]
 
 local BloxByte = {}
@@ -131,47 +132,8 @@ function BloxByte.new(title)
     self.tabs = {}
     self.currentTabFrame = nil
     
-    -- Make the main frame draggable
-    local isDragging = false
-    local dragInput
-    local dragStart
-    local startPos
-    
-    local function updateInput(input)
-        local delta = input.Position - dragStart
-        mainFrame.Position = UDim2.new(
-            startPos.X.Scale, 
-            startPos.X.Offset + delta.X, 
-            startPos.Y.Scale, 
-            startPos.Y.Offset + delta.Y
-        )
-    end
-    
-    titleBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            isDragging = true
-            dragStart = input.Position
-            startPos = mainFrame.Position
-            
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    isDragging = false
-                end
-            end)
-        end
-    end)
-    
-    titleBar.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and isDragging then
-            updateInput(input)
-        end
-    end)
+    -- Make the title bar draggable by default
+    self:MakeDraggable(titleBar, mainFrame)
     
     -- Toggle visibility
     local isVisible = true
@@ -222,6 +184,52 @@ function BloxByte.new(title)
     self:AddTab(self.currentTab)
     
     return self
+end
+
+-- Make a UI element draggable
+function BloxByte:MakeDraggable(dragElement, targetElement)
+    local isDragging = false
+    local dragInput
+    local dragStart
+    local startPos
+    
+    local function updateInput(input)
+        local delta = input.Position - dragStart
+        targetElement.Position = UDim2.new(
+            startPos.X.Scale, 
+            startPos.X.Offset + delta.X, 
+            startPos.Y.Scale, 
+            startPos.Y.Offset + delta.Y
+        )
+    end
+    
+    dragElement.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            isDragging = true
+            dragStart = input.Position
+            startPos = targetElement.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    isDragging = false
+                end
+            end)
+        end
+    end)
+    
+    dragElement.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and isDragging then
+            updateInput(input)
+        end
+    end)
+    
+    return dragElement
 end
 
 -- Add a tab
@@ -424,7 +432,8 @@ function BloxByte:AddToggle(name, defaultState, callback, tabName)
         end,
         GetState = function()
             return isOn
-        end
+        end,
+        Instance = toggleButton
     }
 end
 
@@ -498,6 +507,55 @@ function BloxByte:AddSection(name, tabName)
     tab.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, tab.buttonCount * 48)
     
     return sectionLabel
+end
+
+-- Add a custom draggable handle
+function BloxByte:AddDragHandle(name, tabName)
+    local tab = tabName and self:AddTab(tabName) or self:GetCurrentTab()
+    tab.buttonCount = tab.buttonCount + 1
+    
+    -- Create handle element
+    local handle = Instance.new("Frame")
+    handle.Name = name .. "DragHandle"
+    handle.Size = UDim2.new(1, 0, 0, 40)
+    handle.BackgroundColor3 = Color3.fromRGB(60, 60, 60)  -- Slightly brighter to indicate it's for dragging
+    handle.BorderSizePixel = 0
+    handle.LayoutOrder = tab.buttonCount
+    
+    -- Round the corners
+    local handleCorner = Instance.new("UICorner")
+    handleCorner.CornerRadius = UDim.new(0, 6)
+    handleCorner.Parent = handle
+    
+    -- Add drag icon
+    local dragIcon = Instance.new("ImageLabel")
+    dragIcon.Name = "DragIcon"
+    dragIcon.Size = UDim2.new(0, 24, 0, 24)
+    dragIcon.Position = UDim2.new(0, 8, 0.5, -12)
+    dragIcon.BackgroundTransparency = 1
+    dragIcon.Image = "rbxassetid://7733717661"  -- Drag handle icon
+    dragIcon.Parent = handle
+    
+    -- Add text label
+    local handleText = Instance.new("TextLabel")
+    handleText.Name = "HandleText"
+    handleText.Text = name
+    handleText.Size = UDim2.new(1, -40, 1, 0)
+    handleText.Position = UDim2.new(0, 40, 0, 0)
+    handleText.BackgroundTransparency = 1
+    handleText.TextColor3 = TEXT_COLOR
+    handleText.TextSize = 16
+    handleText.Font = Enum.Font.Gotham
+    handleText.TextXAlignment = Enum.TextXAlignment.Left
+    handleText.Parent = handle
+    
+    -- Make this handle control dragging of the entire UI
+    self:MakeDraggable(handle, self.mainFrame)
+    
+    handle.Parent = tab.scrollFrame
+    tab.scrollFrame.CanvasSize = UDim2.new(0, 0, 0, tab.buttonCount * 48)
+    
+    return handle
 end
 
 -- Destroy the UI
