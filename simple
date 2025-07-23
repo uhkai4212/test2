@@ -1,196 +1,198 @@
---[[
-    NeonUI - Modern Roblox UI Library 2025
-    
-    Features:
-    - Glassmorphism design
-    - Smooth animations and transitions
-    - Modern color schemes
-    - Responsive components
-    - Easy-to-use API
-    
-    Usage:
-    local NeonUI = require(script.NeonUI)
-    local ui = NeonUI.new()
-]]
+-- QuantumUI Library v1.0 - 2025 Futuristic Theme
+-- Created with holographic effects, neon accents, and glassmorphism design
 
-local NeonUI = {}
-NeonUI.__index = NeonUI
-
--- Services
+local QuantumUI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 
--- Constants
-local ANIMATION_SPEED = 0.3
-local COLORS = {
-    primary = Color3.fromRGB(147, 51, 234),      -- Purple
-    secondary = Color3.fromRGB(59, 130, 246),    -- Blue
-    success = Color3.fromRGB(34, 197, 94),       -- Green
-    warning = Color3.fromRGB(245, 158, 11),      -- Yellow
-    danger = Color3.fromRGB(239, 68, 68),        -- Red
-    dark = Color3.fromRGB(17, 24, 39),           -- Dark gray
-    light = Color3.fromRGB(249, 250, 251),       -- Light gray
-    glass = Color3.fromRGB(255, 255, 255)        -- White for glass effect
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+
+-- Color scheme for 2025 theme
+local Colors = {
+    Primary = Color3.fromRGB(0, 255, 200),      -- Cyan
+    Secondary = Color3.fromRGB(255, 0, 150),     -- Hot Pink
+    Accent = Color3.fromRGB(150, 0, 255),        -- Purple
+    Background = Color3.fromRGB(10, 10, 20),     -- Dark Blue
+    Glass = Color3.fromRGB(255, 255, 255),       -- White for glass effect
+    Text = Color3.fromRGB(255, 255, 255),        -- White
+    Success = Color3.fromRGB(0, 255, 100),       -- Green
+    Warning = Color3.fromRGB(255, 200, 0),       -- Yellow
+    Error = Color3.fromRGB(255, 50, 50)          -- Red
 }
 
--- Utility Functions
-local function createCorner(radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius or 12)
-    return corner
+-- Utility functions
+local function createGlow(parent, color, size)
+    local glow = Instance.new("ImageLabel")
+    glow.Name = "Glow"
+    glow.Parent = parent
+    glow.BackgroundTransparency = 1
+    glow.Size = UDim2.new(1, size, 1, size)
+    glow.Position = UDim2.new(0, -size/2, 0, -size/2)
+    glow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    glow.ImageColor3 = color
+    glow.ImageTransparency = 0.3
+    glow.ZIndex = parent.ZIndex - 1
+    return glow
 end
 
-local function createGradient(transparency1, transparency2)
+local function createHolographicEffect(frame)
+    local hologram = Instance.new("Frame")
+    hologram.Name = "HologramEffect"
+    hologram.Parent = frame
+    hologram.Size = UDim2.new(1, 0, 1, 0)
+    hologram.Position = UDim2.new(0, 0, 0, 0)
+    hologram.BackgroundTransparency = 0.9
+    hologram.BackgroundColor3 = Colors.Primary
+    hologram.BorderSizePixel = 0
+    hologram.ZIndex = frame.ZIndex + 1
+    
     local gradient = Instance.new("UIGradient")
-    gradient.Transparency = NumberSequence.new{
-        NumberSequenceKeypoint.new(0, transparency1 or 0.3),
-        NumberSequenceKeypoint.new(1, transparency2 or 0.6)
+    gradient.Parent = hologram
+    gradient.Color = ColorSequence.new{
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.5, Colors.Primary),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255))
     }
-    return gradient
-end
-
-local function createStroke(color, thickness)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color or Color3.fromRGB(255, 255, 255)
-    stroke.Thickness = thickness or 1
-    stroke.Transparency = 0.8
-    return stroke
-end
-
-local function animateProperty(object, properties, duration, easingStyle, easingDirection)
-    local tweenInfo = TweenInfo.new(
-        duration or ANIMATION_SPEED,
-        easingStyle or Enum.EasingStyle.Quart,
-        easingDirection or Enum.EasingDirection.Out
-    )
-    local tween = TweenService:Create(object, tweenInfo, properties)
+    gradient.Rotation = 45
+    
+    -- Animate the holographic effect
+    local tween = TweenService:Create(gradient, TweenInfo.new(2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {
+        Rotation = gradient.Rotation + 360
+    })
     tween:Play()
-    return tween
+    
+    return hologram
 end
 
--- Main Constructor
-function NeonUI.new()
-    local self = setmetatable({}, NeonUI)
+local function addGlassmorphism(frame)
+    frame.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    frame.BackgroundTransparency = 0.9
+    
+    local blur = Instance.new("Frame")
+    blur.Name = "BlurEffect"
+    blur.Parent = frame
+    blur.Size = UDim2.new(1, 0, 1, 0)
+    blur.Position = UDim2.new(0, 0, 0, 0)
+    blur.BackgroundColor3 = Colors.Glass
+    blur.BackgroundTransparency = 0.95
+    blur.BorderSizePixel = 0
+    blur.ZIndex = frame.ZIndex - 1
+    
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = frame
+    
+    local corner2 = Instance.new("UICorner")
+    corner2.CornerRadius = UDim.new(0, 12)
+    corner2.Parent = blur
+    
+    local stroke = Instance.new("UIStroke")
+    stroke.Parent = frame
+    stroke.Color = Colors.Primary
+    stroke.Thickness = 1
+    stroke.Transparency = 0.5
+    
+    return blur
+end
+
+-- Main UI creation function
+function QuantumUI:CreateWindow(config)
+    config = config or {}
+    local windowTitle = config.Title or "QuantumUI Window"
+    local windowSize = config.Size or UDim2.new(0, 500, 0, 400)
     
     -- Create main ScreenGui
-    self.screenGui = Instance.new("ScreenGui")
-    self.screenGui.Name = "NeonUI"
-    self.screenGui.ResetOnSpawn = false
-    self.screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "QuantumUI_" .. tick()
+    screenGui.Parent = PlayerGui
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screenGui.ResetOnSpawn = false
     
-    return self
-end
-
--- Window Component
-function NeonUI:CreateWindow(config)
-    config = config or {}
-    
-    local window = {}
-    
-    -- Main frame
+    -- Main window frame
     local mainFrame = Instance.new("Frame")
-    mainFrame.Name = "NeonWindow"
-    mainFrame.Size = config.size or UDim2.new(0, 600, 0, 400)
-    mainFrame.Position = config.position or UDim2.new(0.5, -300, 0.5, -200)
-    mainFrame.BackgroundColor3 = COLORS.dark
-    mainFrame.BackgroundTransparency = 0.1
+    mainFrame.Name = "MainWindow"
+    mainFrame.Parent = screenGui
+    mainFrame.Size = windowSize
+    mainFrame.Position = UDim2.new(0.5, -windowSize.X.Offset/2, 0.5, -windowSize.Y.Offset/2)
+    mainFrame.BackgroundColor3 = Colors.Background
     mainFrame.BorderSizePixel = 0
-    mainFrame.Parent = self.screenGui
+    mainFrame.ZIndex = 10
     
-    -- Glass effect
-    local glassEffect = createGradient(0.3, 0.6)
-    glassEffect.Parent = mainFrame
-    
-    local corner = createCorner(16)
-    corner.Parent = mainFrame
-    
-    local stroke = createStroke(COLORS.glass, 1)
-    stroke.Parent = mainFrame
-    
-    -- Shadow effect
-    local shadow = Instance.new("ImageLabel")
-    shadow.Name = "Shadow"
-    shadow.Size = UDim2.new(1, 30, 1, 30)
-    shadow.Position = UDim2.new(0, -15, 0, -15)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
-    shadow.ImageTransparency = 0.8
-    shadow.ZIndex = -1
-    shadow.Parent = mainFrame
+    addGlassmorphism(mainFrame)
+    createGlow(mainFrame, Colors.Primary, 20)
+    createHolographicEffect(mainFrame)
     
     -- Title bar
     local titleBar = Instance.new("Frame")
     titleBar.Name = "TitleBar"
-    titleBar.Size = UDim2.new(1, 0, 0, 50)
+    titleBar.Parent = mainFrame
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
     titleBar.Position = UDim2.new(0, 0, 0, 0)
-    titleBar.BackgroundColor3 = COLORS.primary
+    titleBar.BackgroundColor3 = Colors.Primary
     titleBar.BackgroundTransparency = 0.2
     titleBar.BorderSizePixel = 0
-    titleBar.Parent = mainFrame
+    titleBar.ZIndex = mainFrame.ZIndex + 1
     
-    local titleCorner = createCorner(16)
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
     titleCorner.Parent = titleBar
     
-    -- Title text
-    local titleText = Instance.new("TextLabel")
-    titleText.Name = "Title"
-    titleText.Size = UDim2.new(1, -20, 1, 0)
-    titleText.Position = UDim2.new(0, 20, 0, 0)
-    titleText.BackgroundTransparency = 1
-    titleText.Text = config.title or "NeonUI Window"
-    titleText.TextColor3 = COLORS.light
-    titleText.TextSize = 18
-    titleText.TextXAlignment = Enum.TextXAlignment.Left
-    titleText.Font = Enum.Font.GothamBold
-    titleText.Parent = titleBar
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "Title"
+    titleLabel.Parent = titleBar
+    titleLabel.Size = UDim2.new(1, -100, 1, 0)
+    titleLabel.Position = UDim2.new(0, 10, 0, 0)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = windowTitle
+    titleLabel.TextColor3 = Colors.Text
+    titleLabel.TextScaled = true
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.ZIndex = titleBar.ZIndex + 1
     
     -- Close button
     local closeButton = Instance.new("TextButton")
     closeButton.Name = "CloseButton"
-    closeButton.Size = UDim2.new(0, 30, 0, 30)
-    closeButton.Position = UDim2.new(1, -40, 0, 10)
-    closeButton.BackgroundColor3 = COLORS.danger
-    closeButton.BackgroundTransparency = 0.3
-    closeButton.BorderSizePixel = 0
-    closeButton.Text = "×"
-    closeButton.TextColor3 = COLORS.light
-    closeButton.TextSize = 20
-    closeButton.Font = Enum.Font.GothamBold
     closeButton.Parent = titleBar
+    closeButton.Size = UDim2.new(0, 30, 0, 30)
+    closeButton.Position = UDim2.new(1, -35, 0, 5)
+    closeButton.BackgroundColor3 = Colors.Error
+    closeButton.Text = "✕"
+    closeButton.TextColor3 = Colors.Text
+    closeButton.TextScaled = true
+    closeButton.Font = Enum.Font.GothamBold
+    closeButton.BorderSizePixel = 0
+    closeButton.ZIndex = titleBar.ZIndex + 1
     
-    local closeCorner = createCorner(8)
+    local closeCorner = Instance.new("UICorner")
+    closeCorner.CornerRadius = UDim.new(0, 8)
     closeCorner.Parent = closeButton
     
-    -- Content area
+    closeButton.MouseButton1Click:Connect(function()
+        screenGui:Destroy()
+    end)
+    
+    -- Content frame
     local contentFrame = Instance.new("ScrollingFrame")
     contentFrame.Name = "Content"
-    contentFrame.Size = UDim2.new(1, -20, 1, -70)
-    contentFrame.Position = UDim2.new(0, 10, 0, 60)
+    contentFrame.Parent = mainFrame
+    contentFrame.Size = UDim2.new(1, -20, 1, -60)
+    contentFrame.Position = UDim2.new(0, 10, 0, 50)
     contentFrame.BackgroundTransparency = 1
     contentFrame.BorderSizePixel = 0
-    contentFrame.ScrollBarThickness = 6
-    contentFrame.ScrollBarImageColor3 = COLORS.primary
-    contentFrame.Parent = mainFrame
+    contentFrame.ScrollBarThickness = 8
+    contentFrame.ScrollBarImageColor3 = Colors.Primary
+    contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    contentFrame.ZIndex = mainFrame.ZIndex + 1
     
-    -- Layout
-    local layout = Instance.new("UIListLayout")
-    layout.SortOrder = Enum.SortOrder.LayoutOrder
-    layout.Padding = UDim.new(0, 10)
-    layout.Parent = contentFrame
+    local contentLayout = Instance.new("UIListLayout")
+    contentLayout.Parent = contentFrame
+    contentLayout.SortOrder = Enum.SortOrder.LayoutOrder
+    contentLayout.Padding = UDim.new(0, 10)
     
-    -- Window animations
-    mainFrame.Size = UDim2.new(0, 0, 0, 0)
-    mainFrame.BackgroundTransparency = 1
-    
-    -- Entrance animation
-    local entranceTween = animateProperty(mainFrame, {
-        Size = config.size or UDim2.new(0, 600, 0, 400),
-        BackgroundTransparency = 0.1
-    }, 0.5, Enum.EasingStyle.Back)
-    
-    -- Make draggable
+    -- Make window draggable
     local dragging = false
     local dragStart = nil
     local startPos = nil
@@ -216,397 +218,353 @@ function NeonUI:CreateWindow(config)
         end
     end)
     
-    -- Close functionality
-    closeButton.MouseButton1Click:Connect(function()
-        animateProperty(mainFrame, {
-            Size = UDim2.new(0, 0, 0, 0),
-            BackgroundTransparency = 1
-        }, 0.3, Enum.EasingStyle.Back):andThen(function()
-            mainFrame:Destroy()
+    -- Window object
+    local window = {
+        ScreenGui = screenGui,
+        MainFrame = mainFrame,
+        ContentFrame = contentFrame,
+        ContentLayout = contentLayout
+    }
+    
+    -- Add button function
+    function window:AddButton(config)
+        config = config or {}
+        local buttonText = config.Text or "Button"
+        local buttonCallback = config.Callback or function() end
+        
+        local button = Instance.new("TextButton")
+        button.Name = "Button_" .. buttonText
+        button.Parent = self.ContentFrame
+        button.Size = UDim2.new(1, -20, 0, 40)
+        button.BackgroundColor3 = Colors.Primary
+        button.BackgroundTransparency = 0.3
+        button.Text = buttonText
+        button.TextColor3 = Colors.Text
+        button.TextScaled = true
+        button.Font = Enum.Font.Gotham
+        button.BorderSizePixel = 0
+        button.ZIndex = self.ContentFrame.ZIndex + 1
+        
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 8)
+        buttonCorner.Parent = button
+        
+        local buttonStroke = Instance.new("UIStroke")
+        buttonStroke.Parent = button
+        buttonStroke.Color = Colors.Primary
+        buttonStroke.Thickness = 2
+        buttonStroke.Transparency = 0.5
+        
+        -- Button animations
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0.1}):Play()
+            TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
         end)
-    end)
+        
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.2), {BackgroundTransparency = 0.3}):Play()
+            TweenService:Create(buttonStroke, TweenInfo.new(0.2), {Transparency = 0.5}):Play()
+        end)
+        
+        button.MouseButton1Click:Connect(function()
+            -- Click animation
+            TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(0.98, -20, 0, 38)}):Play()
+            wait(0.1)
+            TweenService:Create(button, TweenInfo.new(0.1), {Size = UDim2.new(1, -20, 0, 40)}):Play()
+            buttonCallback()
+        end)
+        
+        self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, self.ContentLayout.AbsoluteContentSize.Y)
+        return button
+    end
     
-    -- Hover effects
-    closeButton.MouseEnter:Connect(function()
-        animateProperty(closeButton, {BackgroundTransparency = 0.1}, 0.2)
-    end)
+    -- Add toggle function
+    function window:AddToggle(config)
+        config = config or {}
+        local toggleText = config.Text or "Toggle"
+        local toggleDefault = config.Default or false
+        local toggleCallback = config.Callback or function() end
+        
+        local toggleFrame = Instance.new("Frame")
+        toggleFrame.Name = "Toggle_" .. toggleText
+        toggleFrame.Parent = self.ContentFrame
+        toggleFrame.Size = UDim2.new(1, -20, 0, 40)
+        toggleFrame.BackgroundTransparency = 1
+        toggleFrame.ZIndex = self.ContentFrame.ZIndex + 1
+        
+        local toggleLabel = Instance.new("TextLabel")
+        toggleLabel.Parent = toggleFrame
+        toggleLabel.Size = UDim2.new(1, -60, 1, 0)
+        toggleLabel.Position = UDim2.new(0, 0, 0, 0)
+        toggleLabel.BackgroundTransparency = 1
+        toggleLabel.Text = toggleText
+        toggleLabel.TextColor3 = Colors.Text
+        toggleLabel.TextScaled = true
+        toggleLabel.Font = Enum.Font.Gotham
+        toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+        toggleLabel.ZIndex = toggleFrame.ZIndex + 1
+        
+        local toggleButton = Instance.new("TextButton")
+        toggleButton.Parent = toggleFrame
+        toggleButton.Size = UDim2.new(0, 50, 0, 25)
+        toggleButton.Position = UDim2.new(1, -50, 0.5, -12.5)
+        toggleButton.BackgroundColor3 = toggleDefault and Colors.Success or Colors.Background
+        toggleButton.Text = ""
+        toggleButton.BorderSizePixel = 0
+        toggleButton.ZIndex = toggleFrame.ZIndex + 1
+        
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(0, 12.5)
+        toggleCorner.Parent = toggleButton
+        
+        local toggleIndicator = Instance.new("Frame")
+        toggleIndicator.Parent = toggleButton
+        toggleIndicator.Size = UDim2.new(0, 20, 0, 20)
+        toggleIndicator.Position = toggleDefault and UDim2.new(1, -22.5, 0.5, -10) or UDim2.new(0, 2.5, 0.5, -10)
+        toggleIndicator.BackgroundColor3 = Colors.Text
+        toggleIndicator.BorderSizePixel = 0
+        toggleIndicator.ZIndex = toggleButton.ZIndex + 1
+        
+        local indicatorCorner = Instance.new("UICorner")
+        indicatorCorner.CornerRadius = UDim.new(0, 10)
+        indicatorCorner.Parent = toggleIndicator
+        
+        local isToggled = toggleDefault
+        
+        toggleButton.MouseButton1Click:Connect(function()
+            isToggled = not isToggled
+            
+            local newColor = isToggled and Colors.Success or Colors.Background
+            local newPosition = isToggled and UDim2.new(1, -22.5, 0.5, -10) or UDim2.new(0, 2.5, 0.5, -10)
+            
+            TweenService:Create(toggleButton, TweenInfo.new(0.2), {BackgroundColor3 = newColor}):Play()
+            TweenService:Create(toggleIndicator, TweenInfo.new(0.2), {Position = newPosition}):Play()
+            
+            toggleCallback(isToggled)
+        end)
+        
+        self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, self.ContentLayout.AbsoluteContentSize.Y)
+        return {Frame = toggleFrame, Button = toggleButton, GetValue = function() return isToggled end}
+    end
     
-    closeButton.MouseLeave:Connect(function()
-        animateProperty(closeButton, {BackgroundTransparency = 0.3}, 0.2)
-    end)
+    -- Add slider function
+    function window:AddSlider(config)
+        config = config or {}
+        local sliderText = config.Text or "Slider"
+        local sliderMin = config.Min or 0
+        local sliderMax = config.Max or 100
+        local sliderDefault = config.Default or sliderMin
+        local sliderCallback = config.Callback or function() end
+        
+        local sliderFrame = Instance.new("Frame")
+        sliderFrame.Name = "Slider_" .. sliderText
+        sliderFrame.Parent = self.ContentFrame
+        sliderFrame.Size = UDim2.new(1, -20, 0, 60)
+        sliderFrame.BackgroundTransparency = 1
+        sliderFrame.ZIndex = self.ContentFrame.ZIndex + 1
+        
+        local sliderLabel = Instance.new("TextLabel")
+        sliderLabel.Parent = sliderFrame
+        sliderLabel.Size = UDim2.new(1, 0, 0, 20)
+        sliderLabel.Position = UDim2.new(0, 0, 0, 0)
+        sliderLabel.BackgroundTransparency = 1
+        sliderLabel.Text = sliderText .. ": " .. sliderDefault
+        sliderLabel.TextColor3 = Colors.Text
+        sliderLabel.TextScaled = true
+        sliderLabel.Font = Enum.Font.Gotham
+        sliderLabel.TextXAlignment = Enum.TextXAlignment.Left
+        sliderLabel.ZIndex = sliderFrame.ZIndex + 1
+        
+        local sliderBackground = Instance.new("Frame")
+        sliderBackground.Parent = sliderFrame
+        sliderBackground.Size = UDim2.new(1, 0, 0, 8)
+        sliderBackground.Position = UDim2.new(0, 0, 0, 30)
+        sliderBackground.BackgroundColor3 = Colors.Background
+        sliderBackground.BorderSizePixel = 0
+        sliderBackground.ZIndex = sliderFrame.ZIndex + 1
+        
+        local sliderBgCorner = Instance.new("UICorner")
+        sliderBgCorner.CornerRadius = UDim.new(0, 4)
+        sliderBgCorner.Parent = sliderBackground
+        
+        local sliderFill = Instance.new("Frame")
+        sliderFill.Parent = sliderBackground
+        sliderFill.Size = UDim2.new((sliderDefault - sliderMin) / (sliderMax - sliderMin), 0, 1, 0)
+        sliderFill.Position = UDim2.new(0, 0, 0, 0)
+        sliderFill.BackgroundColor3 = Colors.Primary
+        sliderFill.BorderSizePixel = 0
+        sliderFill.ZIndex = sliderBackground.ZIndex + 1
+        
+        local sliderFillCorner = Instance.new("UICorner")
+        sliderFillCorner.CornerRadius = UDim.new(0, 4)
+        sliderFillCorner.Parent = sliderFill
+        
+        local sliderKnob = Instance.new("Frame")
+        sliderKnob.Parent = sliderFrame
+        sliderKnob.Size = UDim2.new(0, 16, 0, 16)
+        sliderKnob.Position = UDim2.new((sliderDefault - sliderMin) / (sliderMax - sliderMin), -8, 0, 26)
+        sliderKnob.BackgroundColor3 = Colors.Primary
+        sliderKnob.BorderSizePixel = 0
+        sliderKnob.ZIndex = sliderFrame.ZIndex + 2
+        
+        local sliderKnobCorner = Instance.new("UICorner")
+        sliderKnobCorner.CornerRadius = UDim.new(0, 8)
+        sliderKnobCorner.Parent = sliderKnob
+        
+        local currentValue = sliderDefault
+        local dragging = false
+        
+        sliderKnob.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = true
+            end
+        end)
+        
+        UserInputService.InputChanged:Connect(function(input)
+            if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+                local mouseX = input.Position.X
+                local frameX = sliderBackground.AbsolutePosition.X
+                local frameWidth = sliderBackground.AbsoluteSize.X
+                
+                local percentage = math.clamp((mouseX - frameX) / frameWidth, 0, 1)
+                currentValue = math.floor(sliderMin + (sliderMax - sliderMin) * percentage)
+                
+                sliderFill.Size = UDim2.new(percentage, 0, 1, 0)
+                sliderKnob.Position = UDim2.new(percentage, -8, 0, 26)
+                sliderLabel.Text = sliderText .. ": " .. currentValue
+                
+                sliderCallback(currentValue)
+            end
+        end)
+        
+        UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 then
+                dragging = false
+            end
+        end)
+        
+        self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, self.ContentLayout.AbsoluteContentSize.Y)
+        return {Frame = sliderFrame, GetValue = function() return currentValue end}
+    end
     
-    window.frame = mainFrame
-    window.content = contentFrame
+    -- Add textbox function
+    function window:AddTextbox(config)
+        config = config or {}
+        local textboxText = config.Text or "Textbox"
+        local textboxPlaceholder = config.Placeholder or "Enter text..."
+        local textboxCallback = config.Callback or function() end
+        
+        local textboxFrame = Instance.new("Frame")
+        textboxFrame.Name = "Textbox_" .. textboxText
+        textboxFrame.Parent = self.ContentFrame
+        textboxFrame.Size = UDim2.new(1, -20, 0, 60)
+        textboxFrame.BackgroundTransparency = 1
+        textboxFrame.ZIndex = self.ContentFrame.ZIndex + 1
+        
+        local textboxLabel = Instance.new("TextLabel")
+        textboxLabel.Parent = textboxFrame
+        textboxLabel.Size = UDim2.new(1, 0, 0, 20)
+        textboxLabel.Position = UDim2.new(0, 0, 0, 0)
+        textboxLabel.BackgroundTransparency = 1
+        textboxLabel.Text = textboxText
+        textboxLabel.TextColor3 = Colors.Text
+        textboxLabel.TextScaled = true
+        textboxLabel.Font = Enum.Font.Gotham
+        textboxLabel.TextXAlignment = Enum.TextXAlignment.Left
+        textboxLabel.ZIndex = textboxFrame.ZIndex + 1
+        
+        local textbox = Instance.new("TextBox")
+        textbox.Parent = textboxFrame
+        textbox.Size = UDim2.new(1, 0, 0, 30)
+        textbox.Position = UDim2.new(0, 0, 0, 25)
+        textbox.BackgroundColor3 = Colors.Background
+        textbox.BackgroundTransparency = 0.3
+        textbox.Text = ""
+        textbox.PlaceholderText = textboxPlaceholder
+        textbox.TextColor3 = Colors.Text
+        textbox.PlaceholderColor3 = Color3.fromRGB(150, 150, 150)
+        textbox.TextScaled = true
+        textbox.Font = Enum.Font.Gotham
+        textbox.BorderSizePixel = 0
+        textbox.ZIndex = textboxFrame.ZIndex + 1
+        
+        local textboxCorner = Instance.new("UICorner")
+        textboxCorner.CornerRadius = UDim.new(0, 8)
+        textboxCorner.Parent = textbox
+        
+        local textboxStroke = Instance.new("UIStroke")
+        textboxStroke.Parent = textbox
+        textboxStroke.Color = Colors.Primary
+        textboxStroke.Thickness = 1
+        textboxStroke.Transparency = 0.7
+        
+        textbox.Focused:Connect(function()
+            TweenService:Create(textboxStroke, TweenInfo.new(0.2), {Transparency = 0}):Play()
+        end)
+        
+        textbox.FocusLost:Connect(function()
+            TweenService:Create(textboxStroke, TweenInfo.new(0.2), {Transparency = 0.7}):Play()
+            textboxCallback(textbox.Text)
+        end)
+        
+        self.ContentFrame.CanvasSize = UDim2.new(0, 0, 0, self.ContentLayout.AbsoluteContentSize.Y)
+        return {Frame = textboxFrame, Textbox = textbox, GetValue = function() return textbox.Text end}
+    end
+    
     return window
 end
 
--- Button Component
-function NeonUI:CreateButton(parent, config)
+-- Notification system
+function QuantumUI:CreateNotification(config)
     config = config or {}
+    local notifText = config.Text or "Notification"
+    local notifDuration = config.Duration or 3
+    local notifType = config.Type or "Info" -- Info, Success, Warning, Error
     
-    local button = Instance.new("TextButton")
-    button.Name = config.name or "NeonButton"
-    button.Size = config.size or UDim2.new(0, 200, 0, 45)
-    button.Position = config.position or UDim2.new(0, 0, 0, 0)
-    button.BackgroundColor3 = config.color or COLORS.primary
-    button.BackgroundTransparency = 0.2
-    button.BorderSizePixel = 0
-    button.Text = config.text or "Button"
-    button.TextColor3 = COLORS.light
-    button.TextSize = config.textSize or 16
-    button.Font = Enum.Font.GothamSemibold
-    button.Parent = parent
+    local notifColor = Colors.Primary
+    if notifType == "Success" then notifColor = Colors.Success
+    elseif notifType == "Warning" then notifColor = Colors.Warning
+    elseif notifType == "Error" then notifColor = Colors.Error end
     
-    local corner = createCorner(12)
-    corner.Parent = button
+    local notifGui = Instance.new("ScreenGui")
+    notifGui.Name = "QuantumNotification"
+    notifGui.Parent = PlayerGui
     
-    local gradient = createGradient(0.2, 0.4)
-    gradient.Parent = button
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Parent = notifGui
+    notifFrame.Size = UDim2.new(0, 300, 0, 60)
+    notifFrame.Position = UDim2.new(1, 0, 0, 50)
+    notifFrame.BackgroundColor3 = Colors.Background
+    notifFrame.BorderSizePixel = 0
+    notifFrame.ZIndex = 100
     
-    local stroke = createStroke(COLORS.light, 1)
-    stroke.Parent = button
+    addGlassmorphism(notifFrame)
+    createGlow(notifFrame, notifColor, 10)
     
-    -- Hover animations
-    button.MouseEnter:Connect(function()
-        animateProperty(button, {
-            BackgroundTransparency = 0.1,
-            Size = UDim2.new(button.Size.X.Scale, button.Size.X.Offset + 5, button.Size.Y.Scale, button.Size.Y.Offset + 2)
-        }, 0.2)
-    end)
+    local notifLabel = Instance.new("TextLabel")
+    notifLabel.Parent = notifFrame
+    notifLabel.Size = UDim2.new(1, -20, 1, 0)
+    notifLabel.Position = UDim2.new(0, 10, 0, 0)
+    notifLabel.BackgroundTransparency = 1
+    notifLabel.Text = notifText
+    notifLabel.TextColor3 = Colors.Text
+    notifLabel.TextScaled = true
+    notifLabel.Font = Enum.Font.Gotham
+    notifLabel.ZIndex = notifFrame.ZIndex + 1
     
-    button.MouseLeave:Connect(function()
-        animateProperty(button, {
-            BackgroundTransparency = 0.2,
-            Size = config.size or UDim2.new(0, 200, 0, 45)
-        }, 0.2)
-    end)
+    -- Slide in animation
+    TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(1, -320, 0, 50)
+    }):Play()
     
-    -- Click animation
-    button.MouseButton1Click:Connect(function()
-        animateProperty(button, {Size = UDim2.new(button.Size.X.Scale, button.Size.X.Offset - 3, button.Size.Y.Scale, button.Size.Y.Offset - 1)}, 0.1):andThen(function()
-            animateProperty(button, {Size = config.size or UDim2.new(0, 200, 0, 45)}, 0.1)
-        end)
-        
-        if config.callback then
-            config.callback()
-        end
-    end)
+    -- Auto-remove after duration
+    wait(notifDuration)
+    TweenService:Create(notifFrame, TweenInfo.new(0.5, Enum.EasingStyle.Back), {
+        Position = UDim2.new(1, 0, 0, 50)
+    }):Play()
     
-    return button
+    wait(0.5)
+    notifGui:Destroy()
 end
 
--- Toggle Component
-function NeonUI:CreateToggle(parent, config)
-    config = config or {}
-    
-    local toggleFrame = Instance.new("Frame")
-    toggleFrame.Name = config.name or "NeonToggle"
-    toggleFrame.Size = config.size or UDim2.new(0, 250, 0, 50)
-    toggleFrame.Position = config.position or UDim2.new(0, 0, 0, 0)
-    toggleFrame.BackgroundTransparency = 1
-    toggleFrame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, -70, 1, 0)
-    label.Position = UDim2.new(0, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = config.text or "Toggle"
-    label.TextColor3 = COLORS.light
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.Gotham
-    label.Parent = toggleFrame
-    
-    local toggleButton = Instance.new("TextButton")
-    toggleButton.Name = "ToggleButton"
-    toggleButton.Size = UDim2.new(0, 60, 0, 30)
-    toggleButton.Position = UDim2.new(1, -60, 0.5, -15)
-    toggleButton.BackgroundColor3 = COLORS.dark
-    toggleButton.BackgroundTransparency = 0.3
-    toggleButton.BorderSizePixel = 0
-    toggleButton.Text = ""
-    toggleButton.Parent = toggleFrame
-    
-    local toggleCorner = createCorner(15)
-    toggleCorner.Parent = toggleButton
-    
-    local toggleStroke = createStroke(COLORS.light, 1)
-    toggleStroke.Parent = toggleButton
-    
-    local indicator = Instance.new("Frame")
-    indicator.Name = "Indicator"
-    indicator.Size = UDim2.new(0, 24, 0, 24)
-    indicator.Position = UDim2.new(0, 3, 0.5, -12)
-    indicator.BackgroundColor3 = COLORS.light
-    indicator.BorderSizePixel = 0
-    indicator.Parent = toggleButton
-    
-    local indicatorCorner = createCorner(12)
-    indicatorCorner.Parent = indicator
-    
-    local isToggled = config.default or false
-    
-    local function updateToggle()
-        if isToggled then
-            animateProperty(indicator, {Position = UDim2.new(1, -27, 0.5, -12)}, 0.2)
-            animateProperty(toggleButton, {BackgroundColor3 = COLORS.primary}, 0.2)
-        else
-            animateProperty(indicator, {Position = UDim2.new(0, 3, 0.5, -12)}, 0.2)
-            animateProperty(toggleButton, {BackgroundColor3 = COLORS.dark}, 0.2)
-        end
-    end
-    
-    updateToggle()
-    
-    toggleButton.MouseButton1Click:Connect(function()
-        isToggled = not isToggled
-        updateToggle()
-        
-        if config.callback then
-            config.callback(isToggled)
-        end
-    end)
-    
-    return {frame = toggleFrame, getValue = function() return isToggled end}
-end
-
--- Slider Component
-function NeonUI:CreateSlider(parent, config)
-    config = config or {}
-    
-    local sliderFrame = Instance.new("Frame")
-    sliderFrame.Name = config.name or "NeonSlider"
-    sliderFrame.Size = config.size or UDim2.new(0, 300, 0, 60)
-    sliderFrame.Position = config.position or UDim2.new(0, 0, 0, 0)
-    sliderFrame.BackgroundTransparency = 1
-    sliderFrame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = config.text or "Slider"
-    label.TextColor3 = COLORS.light
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.Gotham
-    label.Parent = sliderFrame
-    
-    local valueLabel = Instance.new("TextLabel")
-    valueLabel.Name = "ValueLabel"
-    valueLabel.Size = UDim2.new(0, 50, 0, 20)
-    valueLabel.Position = UDim2.new(1, -50, 0, 0)
-    valueLabel.BackgroundTransparency = 1
-    valueLabel.Text = tostring(config.default or 0)
-    valueLabel.TextColor3 = COLORS.primary
-    valueLabel.TextSize = 16
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-    valueLabel.Font = Enum.Font.GothamBold
-    valueLabel.Parent = sliderFrame
-    
-    local sliderTrack = Instance.new("Frame")
-    sliderTrack.Name = "Track"
-    sliderTrack.Size = UDim2.new(1, 0, 0, 6)
-    sliderTrack.Position = UDim2.new(0, 0, 1, -20)
-    sliderTrack.BackgroundColor3 = COLORS.dark
-    sliderTrack.BackgroundTransparency = 0.3
-    sliderTrack.BorderSizePixel = 0
-    sliderTrack.Parent = sliderFrame
-    
-    local trackCorner = createCorner(3)
-    trackCorner.Parent = sliderTrack
-    
-    local sliderFill = Instance.new("Frame")
-    sliderFill.Name = "Fill"
-    sliderFill.Size = UDim2.new(0, 0, 1, 0)
-    sliderFill.Position = UDim2.new(0, 0, 0, 0)
-    sliderFill.BackgroundColor3 = COLORS.primary
-    sliderFill.BorderSizePixel = 0
-    sliderFill.Parent = sliderTrack
-    
-    local fillCorner = createCorner(3)
-    fillCorner.Parent = sliderFill
-    
-    local sliderHandle = Instance.new("TextButton")
-    sliderHandle.Name = "Handle"
-    sliderHandle.Size = UDim2.new(0, 20, 0, 20)
-    sliderHandle.Position = UDim2.new(0, -10, 0.5, -10)
-    sliderHandle.BackgroundColor3 = COLORS.light
-    sliderHandle.BorderSizePixel = 0
-    sliderHandle.Text = ""
-    sliderHandle.Parent = sliderTrack
-    
-    local handleCorner = createCorner(10)
-    handleCorner.Parent = sliderHandle
-    
-    local min = config.min or 0
-    local max = config.max or 100
-    local value = config.default or min
-    local dragging = false
-    
-    local function updateSlider()
-        local percentage = (value - min) / (max - min)
-        animateProperty(sliderFill, {Size = UDim2.new(percentage, 0, 1, 0)}, 0.1)
-        animateProperty(sliderHandle, {Position = UDim2.new(percentage, -10, 0.5, -10)}, 0.1)
-        valueLabel.Text = tostring(math.floor(value))
-    end
-    
-    updateSlider()
-    
-    sliderHandle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            animateProperty(sliderHandle, {Size = UDim2.new(0, 24, 0, 24)}, 0.1)
-        end
-    end)
-    
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-            local mousePos = input.Position.X
-            local trackPos = sliderTrack.AbsolutePosition.X
-            local trackSize = sliderTrack.AbsoluteSize.X
-            local percentage = math.clamp((mousePos - trackPos) / trackSize, 0, 1)
-            value = min + (max - min) * percentage
-            updateSlider()
-            
-            if config.callback then
-                config.callback(value)
-            end
-        end
-    end)
-    
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = false
-            animateProperty(sliderHandle, {Size = UDim2.new(0, 20, 0, 20)}, 0.1)
-        end
-    end)
-    
-    return {frame = sliderFrame, getValue = function() return value end}
-end
-
--- Input Component
-function NeonUI:CreateInput(parent, config)
-    config = config or {}
-    
-    local inputFrame = Instance.new("Frame")
-    inputFrame.Name = config.name or "NeonInput"
-    inputFrame.Size = config.size or UDim2.new(0, 300, 0, 70)
-    inputFrame.Position = config.position or UDim2.new(0, 0, 0, 0)
-    inputFrame.BackgroundTransparency = 1
-    inputFrame.Parent = parent
-    
-    local label = Instance.new("TextLabel")
-    label.Name = "Label"
-    label.Size = UDim2.new(1, 0, 0, 20)
-    label.Position = UDim2.new(0, 0, 0, 0)
-    label.BackgroundTransparency = 1
-    label.Text = config.text or "Input"
-    label.TextColor3 = COLORS.light
-    label.TextSize = 16
-    label.TextXAlignment = Enum.TextXAlignment.Left
-    label.Font = Enum.Font.Gotham
-    label.Parent = inputFrame
-    
-    local textBox = Instance.new("TextBox")
-    textBox.Name = "TextBox"
-    textBox.Size = UDim2.new(1, 0, 0, 40)
-    textBox.Position = UDim2.new(0, 0, 1, -40)
-    textBox.BackgroundColor3 = COLORS.dark
-    textBox.BackgroundTransparency = 0.3
-    textBox.BorderSizePixel = 0
-    textBox.Text = config.placeholder or ""
-    textBox.PlaceholderText = config.placeholder or "Enter text..."
-    textBox.TextColor3 = COLORS.light
-    textBox.PlaceholderColor3 = Color3.fromRGB(156, 163, 175)
-    textBox.TextSize = 16
-    textBox.Font = Enum.Font.Gotham
-    textBox.TextXAlignment = Enum.TextXAlignment.Left
-    textBox.Parent = inputFrame
-    
-    local corner = createCorner(8)
-    corner.Parent = textBox
-    
-    local stroke = createStroke(COLORS.light, 1)
-    stroke.Parent = textBox
-    
-    -- Focus animations
-    textBox.Focused:Connect(function()
-        animateProperty(stroke, {Color = COLORS.primary, Thickness = 2}, 0.2)
-    end)
-    
-    textBox.FocusLost:Connect(function()
-        animateProperty(stroke, {Color = COLORS.light, Thickness = 1}, 0.2)
-        
-        if config.callback then
-            config.callback(textBox.Text)
-        end
-    end)
-    
-    return {frame = inputFrame, getValue = function() return textBox.Text end}
-end
-
--- Notification System
-function NeonUI:CreateNotification(config)
-    config = config or {}
-    
-    local notification = Instance.new("Frame")
-    notification.Name = "NeonNotification"
-    notification.Size = UDim2.new(0, 350, 0, 80)
-    notification.Position = UDim2.new(1, -370, 0, 20)
-    notification.BackgroundColor3 = config.color or COLORS.primary
-    notification.BackgroundTransparency = 0.1
-    notification.BorderSizePixel = 0
-    notification.Parent = self.screenGui
-    
-    local corner = createCorner(12)
-    corner.Parent = notification
-    
-    local gradient = createGradient(0.1, 0.3)
-    gradient.Parent = notification
-    
-    local stroke = createStroke(COLORS.light, 1)
-    stroke.Parent = notification
-    
-    local title = Instance.new("TextLabel")
-    title.Name = "Title"
-    title.Size = UDim2.new(1, -20, 0, 25)
-    title.Position = UDim2.new(0, 10, 0, 10)
-    title.BackgroundTransparency = 1
-    title.Text = config.title or "Notification"
-    title.TextColor3 = COLORS.light
-    title.TextSize = 18
-    title.TextXAlignment = Enum.TextXAlignment.Left
-    title.Font = Enum.Font.GothamBold
-    title.Parent = notification
-    
-    local description = Instance.new("TextLabel")
-    description.Name = "Description"
-    description.Size = UDim2.new(1, -20, 0, 35)
-    description.Position = UDim2.new(0, 10, 0, 35)
-    description.BackgroundTransparency = 1
-    description.Text = config.description or "This is a notification"
-    description.TextColor3 = COLORS.light
-    description.TextSize = 14
-    description.TextXAlignment = Enum.TextXAlignment.Left
-    description.TextWrapped = true
-    description.Font = Enum.Font.Gotham
-    description.Parent = notification
-    
-    -- Entrance animation
-    notification.Position = UDim2.new(1, 50, 0, 20)
-    animateProperty(notification, {Position = UDim2.new(1, -370, 0, 20)}, 0.4, Enum.EasingStyle.Back)
-    
-    -- Auto dismiss
-    wait(config.duration or 3)
-    animateProperty(notification, {
-        Position = UDim2.new(1, 50, 0, 20),
-        BackgroundTransparency = 1
-    }, 0.3):andThen(function()
-        notification:Destroy()
-    end)
-end
-
-return NeonUI
+return QuantumUI
