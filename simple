@@ -1,355 +1,305 @@
--- SimpleUI - Lightweight Roblox UI Library
--- Mobile-friendly with smooth animations
+--[[
+    Minimal Button UI Library for Roblox
+    Modern, clean, and lightweight button system
+    Designed for 2025 aesthetics
+]]
 
-local SimpleUI = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
--- Default settings
-local DEFAULTS = {
-    animationTime = 0.3,
-    easingStyle = Enum.EasingStyle.Quad,
-    easingDirection = Enum.EasingDirection.Out,
-    primaryColor = Color3.fromRGB(70, 130, 250),
-    secondaryColor = Color3.fromRGB(45, 45, 45),
-    textColor = Color3.fromRGB(255, 255, 255),
-    cornerRadius = UDim.new(0, 8)
+local ButtonLib = {}
+ButtonLib.__index = ButtonLib
+
+-- Modern color palette
+local COLORS = {
+    PRIMARY = Color3.fromRGB(18, 18, 20),      -- Deep charcoal
+    SECONDARY = Color3.fromRGB(28, 28, 32),    -- Lighter charcoal
+    ACCENT = Color3.fromRGB(99, 102, 241),     -- Modern indigo
+    SUCCESS = Color3.fromRGB(16, 185, 129),    -- Emerald
+    WARNING = Color3.fromRGB(245, 158, 11),    -- Amber
+    DANGER = Color3.fromRGB(239, 68, 68),      -- Red
+    TEXT_PRIMARY = Color3.fromRGB(255, 255, 255),
+    TEXT_SECONDARY = Color3.fromRGB(156, 163, 175),
+    SURFACE = Color3.fromRGB(24, 24, 27),
+    BORDER = Color3.fromRGB(39, 39, 42)
 }
 
--- Utility functions
-local function createTween(object, properties, time)
-    local info = TweenInfo.new(
-        time or DEFAULTS.animationTime,
-        DEFAULTS.easingStyle,
-        DEFAULTS.easingDirection
-    )
-    return TweenService:Create(object, info, properties)
-end
+-- Animation presets
+local ANIMATIONS = {
+    QUICK = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+    SMOOTH = TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+    BOUNCE = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+}
 
-local function isMobile()
-    return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
-end
+-- Button variants
+local VARIANTS = {
+    primary = {bg = COLORS.ACCENT, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(79, 70, 229)},
+    secondary = {bg = COLORS.SECONDARY, text = COLORS.TEXT_PRIMARY, hover = COLORS.BORDER},
+    ghost = {bg = Color3.fromRGB(0, 0, 0, 0), text = COLORS.TEXT_SECONDARY, hover = COLORS.SURFACE},
+    success = {bg = COLORS.SUCCESS, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(5, 150, 105)},
+    warning = {bg = COLORS.WARNING, text = COLORS.PRIMARY, hover = Color3.fromRGB(217, 119, 6)},
+    danger = {bg = COLORS.DANGER, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(220, 38, 38)}
+}
 
--- Create base frame with rounded corners
-function SimpleUI.createFrame(parent, properties)
-    local frame = Instance.new("Frame")
-    frame.Parent = parent
-    frame.BackgroundColor3 = properties.color or DEFAULTS.secondaryColor
-    frame.BorderSizePixel = 0
-    frame.Size = properties.size or UDim2.new(0, 200, 0, 100)
-    frame.Position = properties.position or UDim2.new(0, 0, 0, 0)
+-- Create a new button
+function ButtonLib.new(config)
+    local self = setmetatable({}, ButtonLib)
     
-    -- Add corner rounding
+    config = config or {}
+    
+    -- Button properties
+    self.text = config.text or "Button"
+    self.variant = config.variant or "primary"
+    self.size = config.size or "md"
+    self.disabled = config.disabled or false
+    self.parent = config.parent
+    self.onClick = config.onClick or function() end
+    
+    -- Size presets
+    local sizes = {
+        sm = {height = 32, padding = 12, textSize = 14},
+        md = {height = 40, padding = 16, textSize = 16},
+        lg = {height = 48, padding = 20, textSize = 18},
+        xl = {height = 56, padding = 24, textSize = 20}
+    }
+    
+    local sizeConfig = sizes[self.size] or sizes.md
+    local variantConfig = VARIANTS[self.variant] or VARIANTS.primary
+    
+    -- Create button frame
+    self.frame = Instance.new("TextButton")
+    self.frame.Name = "MinimalButton"
+    self.frame.Size = UDim2.new(0, 120, 0, sizeConfig.height)
+    self.frame.Position = config.position or UDim2.new(0, 10, 0, 10)
+    self.frame.BackgroundColor3 = variantConfig.bg
+    self.frame.BorderSizePixel = 0
+    self.frame.Text = ""
+    self.frame.AutoButtonColor = false
+    self.frame.ClipsDescendants = true
+    
+    -- Modern rounded corners
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = properties.cornerRadius or DEFAULTS.cornerRadius
-    corner.Parent = frame
+    corner.CornerRadius = UDim.new(0, 8)
+    corner.Parent = self.frame
     
-    return frame
-end
-
--- Create animated button
-function SimpleUI.createButton(parent, properties)
-    local button = Instance.new("TextButton")
-    button.Parent = parent
-    button.BackgroundColor3 = properties.color or DEFAULTS.primaryColor
-    button.BorderSizePixel = 0
-    button.Size = properties.size or UDim2.new(0, 120, 0, 40)
-    button.Position = properties.position or UDim2.new(0, 0, 0, 0)
-    button.Text = properties.text or "Button"
-    button.TextColor3 = properties.textColor or DEFAULTS.textColor
-    button.TextScaled = true
-    button.Font = Enum.Font.GothamBold
+    -- Subtle border for depth
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = COLORS.BORDER
+    stroke.Thickness = 1
+    stroke.Transparency = 0.8
+    stroke.Parent = self.frame
     
-    -- Mobile-friendly sizing
-    if isMobile() then
-        button.Size = UDim2.new(button.Size.X.Scale, button.Size.X.Offset, 0, math.max(50, button.Size.Y.Offset))
+    -- Button text
+    self.label = Instance.new("TextLabel")
+    self.label.Name = "Label"
+    self.label.Size = UDim2.new(1, -sizeConfig.padding * 2, 1, 0)
+    self.label.Position = UDim2.new(0, sizeConfig.padding, 0, 0)
+    self.label.BackgroundTransparency = 1
+    self.label.Text = self.text
+    self.label.TextColor3 = variantConfig.text
+    self.label.TextSize = sizeConfig.textSize
+    self.label.TextScaled = false
+    self.label.Font = Enum.Font.GothamBold
+    self.label.Parent = self.frame
+    
+    -- Hover effect overlay
+    self.hoverOverlay = Instance.new("Frame")
+    self.hoverOverlay.Name = "HoverOverlay"
+    self.hoverOverlay.Size = UDim2.new(1, 0, 1, 0)
+    self.hoverOverlay.BackgroundColor3 = Color3.new(1, 1, 1)
+    self.hoverOverlay.BackgroundTransparency = 1
+    self.hoverOverlay.BorderSizePixel = 0
+    self.hoverOverlay.Parent = self.frame
+    
+    local hoverCorner = Instance.new("UICorner")
+    hoverCorner.CornerRadius = UDim.new(0, 8)
+    hoverCorner.Parent = self.hoverOverlay
+    
+    -- Ripple effect frame
+    self.rippleFrame = Instance.new("Frame")
+    self.rippleFrame.Name = "RippleFrame"
+    self.rippleFrame.Size = UDim2.new(1, 0, 1, 0)
+    self.rippleFrame.BackgroundTransparency = 1
+    self.rippleFrame.BorderSizePixel = 0
+    self.rippleFrame.Parent = self.frame
+    
+    local rippleCorner = Instance.new("UICorner")
+    rippleCorner.CornerRadius = UDim.new(0, 8)
+    rippleCorner.Parent = self.rippleFrame
+    
+    -- Connect events
+    self:_connectEvents()
+    
+    -- Set parent
+    if self.parent then
+        self.frame.Parent = self.parent
     end
     
-    -- Add corner rounding
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = properties.cornerRadius or DEFAULTS.cornerRadius
-    corner.Parent = button
-    
-    -- Add text padding
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 12)
-    padding.PaddingRight = UDim.new(0, 12)
-    padding.PaddingTop = UDim.new(0, 8)
-    padding.PaddingBottom = UDim.new(0, 8)
-    padding.Parent = button
-    
-    -- Animation effects
-    local originalSize = button.Size
-    local hoverSize = UDim2.new(originalSize.X.Scale, originalSize.X.Offset + 4, originalSize.Y.Scale, originalSize.Y.Offset + 2)
-    
-    button.MouseEnter:Connect(function()
-        createTween(button, {Size = hoverSize}, 0.15):Play()
-        createTween(button, {BackgroundColor3 = button.BackgroundColor3:lerp(Color3.new(1, 1, 1), 0.1)}, 0.15):Play()
-    end)
-    
-    button.MouseLeave:Connect(function()
-        createTween(button, {Size = originalSize}, 0.15):Play()
-        createTween(button, {BackgroundColor3 = properties.color or DEFAULTS.primaryColor}, 0.15):Play()
-    end)
-    
-    button.MouseButton1Down:Connect(function()
-        createTween(button, {Size = UDim2.new(originalSize.X.Scale, originalSize.X.Offset - 2, originalSize.Y.Scale, originalSize.Y.Offset - 1)}, 0.1):Play()
-    end)
-    
-    button.MouseButton1Up:Connect(function()
-        createTween(button, {Size = originalSize}, 0.1):Play()
-    end)
-    
-    -- Callback
-    if properties.callback then
-        button.MouseButton1Click:Connect(properties.callback)
-    end
-    
-    return button
+    return self
 end
 
--- Create text label with fade-in animation
-function SimpleUI.createLabel(parent, properties)
-    local label = Instance.new("TextLabel")
-    label.Parent = parent
-    label.BackgroundTransparency = 1
-    label.Size = properties.size or UDim2.new(1, 0, 0, 30)
-    label.Position = properties.position or UDim2.new(0, 0, 0, 0)
-    label.Text = properties.text or "Label"
-    label.TextColor3 = properties.textColor or DEFAULTS.textColor
-    label.TextScaled = properties.textScaled or true
-    label.Font = properties.font or Enum.Font.Gotham
-    label.TextTransparency = 1
+-- Connect button events
+function ButtonLib:_connectEvents()
+    local variantConfig = VARIANTS[self.variant] or VARIANTS.primary
     
-    -- Add text padding
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 8)
-    padding.PaddingRight = UDim.new(0, 8)
-    padding.Parent = label
+    -- Hover effects
+    self.frame.MouseEnter:Connect(function()
+        if self.disabled then return end
+        
+        TweenService:Create(self.hoverOverlay, ANIMATIONS.QUICK, {
+            BackgroundTransparency = 0.92
+        }):Play()
+        
+        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
+            Size = self.frame.Size + UDim2.new(0, 2, 0, 1)
+        }):Play()
+    end)
     
-    -- Fade in animation
-    createTween(label, {TextTransparency = 0}, 0.5):Play()
+    self.frame.MouseLeave:Connect(function()
+        if self.disabled then return end
+        
+        TweenService:Create(self.hoverOverlay, ANIMATIONS.QUICK, {
+            BackgroundTransparency = 1
+        }):Play()
+        
+        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
+            Size = self.frame.Size - UDim2.new(0, 2, 0, 1)
+        }):Play()
+    end)
     
-    return label
+    -- Click effects
+    self.frame.MouseButton1Down:Connect(function()
+        if self.disabled then return end
+        
+        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
+            Size = self.frame.Size - UDim2.new(0, 4, 0, 2)
+        }):Play()
+        
+        self:_createRipple()
+    end)
+    
+    self.frame.MouseButton1Up:Connect(function()
+        if self.disabled then return end
+        
+        TweenService:Create(self.frame, ANIMATIONS.BOUNCE, {
+            Size = self.frame.Size + UDim2.new(0, 4, 0, 2)
+        }):Play()
+    end)
+    
+    -- Click callback
+    self.frame.MouseButton1Click:Connect(function()
+        if self.disabled then return end
+        self.onClick()
+    end)
 end
 
--- Create sliding panel
-function SimpleUI.createPanel(parent, properties)
-    local panel = SimpleUI.createFrame(parent, {
-        size = properties.size or UDim2.new(0, 300, 0, 400),
-        position = properties.position or UDim2.new(1, 20, 0.5, -200),
-        color = properties.color or DEFAULTS.secondaryColor,
-        cornerRadius = properties.cornerRadius
+-- Create ripple effect
+function ButtonLib:_createRipple()
+    local mouse = UserInputService:GetMouseLocation()
+    local framePos = self.frame.AbsolutePosition
+    local frameSize = self.frame.AbsoluteSize
+    
+    local relativeX = (mouse.X - framePos.X) / frameSize.X
+    local relativeY = (mouse.Y - framePos.Y) / frameSize.Y
+    
+    local ripple = Instance.new("Frame")
+    ripple.Name = "Ripple"
+    ripple.Size = UDim2.new(0, 0, 0, 0)
+    ripple.Position = UDim2.new(relativeX, 0, relativeY, 0)
+    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+    ripple.BackgroundColor3 = Color3.new(1, 1, 1)
+    ripple.BackgroundTransparency = 0.8
+    ripple.BorderSizePixel = 0
+    ripple.Parent = self.rippleFrame
+    
+    local rippleCorner = Instance.new("UICorner")
+    rippleCorner.CornerRadius = UDim.new(0.5, 0)
+    rippleCorner.Parent = ripple
+    
+    -- Animate ripple
+    local maxSize = math.max(frameSize.X, frameSize.Y) * 2
+    
+    local expandTween = TweenService:Create(ripple, ANIMATIONS.SMOOTH, {
+        Size = UDim2.new(0, maxSize, 0, maxSize),
+        BackgroundTransparency = 1
     })
     
-    -- Add shadow effect
-    local shadow = Instance.new("ImageLabel")
-    shadow.Parent = panel
-    shadow.Size = UDim2.new(1, 20, 1, 20)
-    shadow.Position = UDim2.new(0, -10, 0, -10)
-    shadow.BackgroundTransparency = 1
-    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    shadow.ImageColor3 = Color3.new(0, 0, 0)
-    shadow.ImageTransparency = 0.8
-    shadow.ZIndex = panel.ZIndex - 1
-    
-    local shadowCorner = Instance.new("UICorner")
-    shadowCorner.CornerRadius = properties.cornerRadius or DEFAULTS.cornerRadius
-    shadowCorner.Parent = shadow
-    
-    -- Panel controls
-    panel.slideIn = function()
-        local targetPos = properties.openPosition or UDim2.new(1, -320, 0.5, -200)
-        createTween(panel, {Position = targetPos}):Play()
-    end
-    
-    panel.slideOut = function()
-        local targetPos = properties.position or UDim2.new(1, 20, 0.5, -200)
-        createTween(panel, {Position = targetPos}):Play()
-    end
-    
-    return panel
-end
-
--- Create modal with backdrop
-function SimpleUI.createModal(parent, properties)
-    -- Backdrop
-    local backdrop = Instance.new("Frame")
-    backdrop.Parent = parent
-    backdrop.Size = UDim2.new(1, 0, 1, 0)
-    backdrop.Position = UDim2.new(0, 0, 0, 0)
-    backdrop.BackgroundColor3 = Color3.new(0, 0, 0)
-    backdrop.BackgroundTransparency = 1
-    backdrop.ZIndex = 100
-    
-    -- Modal content
-    local modal = SimpleUI.createFrame(backdrop, {
-        size = properties.size or UDim2.new(0, 300, 0, 200),
-        position = UDim2.new(0.5, -150, 0.5, -100),
-        color = properties.color or DEFAULTS.secondaryColor,
-        cornerRadius = properties.cornerRadius
-    })
-    modal.ZIndex = 101
-    
-    -- Initial state (hidden)
-    modal.Size = UDim2.new(0, 0, 0, 0)
-    
-    -- Show animation
-    modal.show = function()
-        createTween(backdrop, {BackgroundTransparency = 0.3}):Play()
-        createTween(modal, {Size = properties.size or UDim2.new(0, 300, 0, 200)}):Play()
-    end
-    
-    -- Hide animation
-    modal.hide = function()
-        createTween(backdrop, {BackgroundTransparency = 1}):Play()
-        local hideTween = createTween(modal, {Size = UDim2.new(0, 0, 0, 0)})
-        hideTween:Play()
-        hideTween.Completed:Connect(function()
-            backdrop:Destroy()
-        end)
-    end
-    
-    -- Close on backdrop click
-    backdrop.MouseButton1Click:Connect(function()
-        modal.hide()
+    expandTween:Play()
+    expandTween.Completed:Connect(function()
+        ripple:Destroy()
     end)
-    
-    return modal
 end
 
--- Create notification
-function SimpleUI.createNotification(parent, properties)
-    local notification = SimpleUI.createFrame(parent, {
-        size = UDim2.new(0, 280, 0, 60),
-        position = UDim2.new(1, 20, 0, 20),
-        color = properties.color or DEFAULTS.primaryColor,
-        cornerRadius = properties.cornerRadius
-    })
-    
-    -- Add text
-    local label = SimpleUI.createLabel(notification, {
-        text = properties.text or "Notification",
-        textColor = properties.textColor or DEFAULTS.textColor,
-        size = UDim2.new(1, -40, 1, 0),
-        position = UDim2.new(0, 20, 0, 0)
-    })
-    
-    -- Slide in animation
-    local targetPos = UDim2.new(1, -300, 0, 20)
-    createTween(notification, {Position = targetPos}):Play()
-    
-    -- Auto hide after duration
-    wait(properties.duration or 3)
-    local hidePos = UDim2.new(1, 20, 0, 20)
-    local hideTween = createTween(notification, {Position = hidePos})
-    hideTween:Play()
-    hideTween.Completed:Connect(function()
-        notification:Destroy()
-    end)
-    
-    return notification
+-- Update button text
+function ButtonLib:setText(newText)
+    self.text = newText
+    self.label.Text = newText
 end
 
--- Create loading spinner
-function SimpleUI.createSpinner(parent, properties)
-    local spinner = Instance.new("ImageLabel")
-    spinner.Parent = parent
-    spinner.Size = properties.size or UDim2.new(0, 40, 0, 40)
-    spinner.Position = properties.position or UDim2.new(0.5, -20, 0.5, -20)
-    spinner.BackgroundTransparency = 1
-    spinner.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
-    spinner.ImageColor3 = properties.color or DEFAULTS.primaryColor
+-- Update button variant
+function ButtonLib:setVariant(newVariant)
+    if not VARIANTS[newVariant] then return end
     
-    -- Rotation animation
-    local rotationTween = createTween(spinner, {Rotation = 360}, 1)
-    rotationTween.Completed:Connect(function()
-        spinner.Rotation = 0
-        rotationTween:Play()
-    end)
-    rotationTween:Play()
+    self.variant = newVariant
+    local variantConfig = VARIANTS[newVariant]
     
-    spinner.stop = function()
-        rotationTween:Cancel()
-        spinner:Destroy()
+    TweenService:Create(self.frame, ANIMATIONS.SMOOTH, {
+        BackgroundColor3 = variantConfig.bg
+    }):Play()
+    
+    TweenService:Create(self.label, ANIMATIONS.SMOOTH, {
+        TextColor3 = variantConfig.text
+    }):Play()
+end
+
+-- Enable/disable button
+function ButtonLib:setDisabled(disabled)
+    self.disabled = disabled
+    
+    local transparency = disabled and 0.5 or 0
+    
+    TweenService:Create(self.frame, ANIMATIONS.SMOOTH, {
+        BackgroundTransparency = transparency
+    }):Play()
+    
+    TweenService:Create(self.label, ANIMATIONS.SMOOTH, {
+        TextTransparency = transparency
+    }):Play()
+end
+
+-- Destroy button
+function ButtonLib:destroy()
+    if self.frame then
+        self.frame:Destroy()
     end
-    
-    return spinner
 end
 
--- Initialize library with custom settings
-function SimpleUI.init(settings)
-    if settings then
-        for key, value in pairs(settings) do
-            if DEFAULTS[key] then
-                DEFAULTS[key] = value
-            end
+-- Set button position
+function ButtonLib:setPosition(position)
+    self.frame.Position = position
+end
+
+-- Set button size
+function ButtonLib:setSize(size)
+    self.frame.Size = size
+end
+
+-- Utility function to create multiple buttons easily
+function ButtonLib.createGroup(configs, parent)
+    local buttons = {}
+    
+    for i, config in ipairs(configs) do
+        config = config or {}
+        config.parent = parent
+        
+        if not config.position then
+            config.position = UDim2.new(0, 10, 0, 10 + (i - 1) * 60)
         end
+        
+        table.insert(buttons, ButtonLib.new(config))
     end
     
-    print("SimpleUI initialized! Mobile support:", isMobile())
+    return buttons
 end
 
--- Example usage function
-function SimpleUI.createExample(parent)
-    -- Create main container
-    local container = SimpleUI.createFrame(parent, {
-        size = UDim2.new(0, 400, 0, 300),
-        position = UDim2.new(0.5, -200, 0.5, -150),
-        color = Color3.fromRGB(30, 30, 30)
-    })
-    
-    -- Title
-    SimpleUI.createLabel(container, {
-        text = "SimpleUI Demo",
-        size = UDim2.new(1, 0, 0, 40),
-        position = UDim2.new(0, 0, 0, 10),
-        font = Enum.Font.GothamBold
-    })
-    
-    -- Sample button
-    SimpleUI.createButton(container, {
-        text = "Click Me!",
-        size = UDim2.new(0, 120, 0, 40),
-        position = UDim2.new(0.5, -60, 0, 60),
-        callback = function()
-            SimpleUI.createNotification(parent, {
-                text = "Button clicked!",
-                color = Color3.fromRGB(50, 200, 50)
-            })
-        end
-    })
-    
-    -- Modal button
-    SimpleUI.createButton(container, {
-        text = "Open Modal",
-        size = UDim2.new(0, 120, 0, 40),
-        position = UDim2.new(0.5, -60, 0, 110),
-        callback = function()
-            local modal = SimpleUI.createModal(parent, {
-                size = UDim2.new(0, 250, 0, 150)
-            })
-            
-            SimpleUI.createLabel(modal, {
-                text = "This is a modal!",
-                size = UDim2.new(1, 0, 0, 30),
-                position = UDim2.new(0, 0, 0, 20)
-            })
-            
-            SimpleUI.createButton(modal, {
-                text = "Close",
-                size = UDim2.new(0, 80, 0, 30),
-                position = UDim2.new(0.5, -40, 1, -50),
-                callback = function()
-                    modal.hide()
-                end
-            })
-            
-            modal.show()
-        end
-    })
-    
-    return container
-end
-
-return SimpleUI
+return ButtonLib
