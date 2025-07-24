@@ -2,22 +2,26 @@
     Minimal Button UI Library for Roblox
     Modern, clean, and lightweight button system
     Designed for 2025 aesthetics
+    
+    Usage:
+    local ButtonLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/uhkai4212/test2/refs/heads/main/simple")()
 ]]
 
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 
 local ButtonLib = {}
 ButtonLib.__index = ButtonLib
 
 -- Modern color palette
 local COLORS = {
-    PRIMARY = Color3.fromRGB(18, 18, 20),      -- Deep charcoal
-    SECONDARY = Color3.fromRGB(28, 28, 32),    -- Lighter charcoal
-    ACCENT = Color3.fromRGB(99, 102, 241),     -- Modern indigo
-    SUCCESS = Color3.fromRGB(16, 185, 129),    -- Emerald
-    WARNING = Color3.fromRGB(245, 158, 11),    -- Amber
-    DANGER = Color3.fromRGB(239, 68, 68),      -- Red
+    PRIMARY = Color3.fromRGB(18, 18, 20),
+    SECONDARY = Color3.fromRGB(28, 28, 32),
+    ACCENT = Color3.fromRGB(99, 102, 241),
+    SUCCESS = Color3.fromRGB(16, 185, 129),
+    WARNING = Color3.fromRGB(245, 158, 11),
+    DANGER = Color3.fromRGB(239, 68, 68),
     TEXT_PRIMARY = Color3.fromRGB(255, 255, 255),
     TEXT_SECONDARY = Color3.fromRGB(156, 163, 175),
     SURFACE = Color3.fromRGB(24, 24, 27),
@@ -35,11 +39,29 @@ local ANIMATIONS = {
 local VARIANTS = {
     primary = {bg = COLORS.ACCENT, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(79, 70, 229)},
     secondary = {bg = COLORS.SECONDARY, text = COLORS.TEXT_PRIMARY, hover = COLORS.BORDER},
-    ghost = {bg = Color3.fromRGB(0, 0, 0, 0), text = COLORS.TEXT_SECONDARY, hover = COLORS.SURFACE},
+    ghost = {bg = Color3.new(0, 0, 0), text = COLORS.TEXT_SECONDARY, hover = COLORS.SURFACE},
     success = {bg = COLORS.SUCCESS, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(5, 150, 105)},
     warning = {bg = COLORS.WARNING, text = COLORS.PRIMARY, hover = Color3.fromRGB(217, 119, 6)},
     danger = {bg = COLORS.DANGER, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(220, 38, 38)}
 }
+
+-- Auto-create ScreenGui if needed
+local function getScreenGui()
+    local player = Players.LocalPlayer
+    if not player then return nil end
+    
+    local playerGui = player:WaitForChild("PlayerGui")
+    local screenGui = playerGui:FindFirstChild("ButtonLibGui")
+    
+    if not screenGui then
+        screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "ButtonLibGui"
+        screenGui.ResetOnSpawn = false
+        screenGui.Parent = playerGui
+    end
+    
+    return screenGui
+end
 
 -- Create a new button
 function ButtonLib.new(config)
@@ -52,7 +74,7 @@ function ButtonLib.new(config)
     self.variant = config.variant or "primary"
     self.size = config.size or "md"
     self.disabled = config.disabled or false
-    self.parent = config.parent
+    self.parent = config.parent or getScreenGui()
     self.onClick = config.onClick or function() end
     
     -- Size presets
@@ -66,11 +88,15 @@ function ButtonLib.new(config)
     local sizeConfig = sizes[self.size] or sizes.md
     local variantConfig = VARIANTS[self.variant] or VARIANTS.primary
     
+    -- Auto-calculate width based on text
+    local textWidth = #self.text * (sizeConfig.textSize * 0.6) + (sizeConfig.padding * 2)
+    local buttonWidth = math.max(textWidth, 80)
+    
     -- Create button frame
     self.frame = Instance.new("TextButton")
-    self.frame.Name = "MinimalButton"
-    self.frame.Size = UDim2.new(0, 120, 0, sizeConfig.height)
-    self.frame.Position = config.position or UDim2.new(0, 10, 0, 10)
+    self.frame.Name = "MinimalButton_" .. self.text
+    self.frame.Size = UDim2.new(0, buttonWidth, 0, sizeConfig.height)
+    self.frame.Position = config.position or UDim2.new(0, 20, 0, 20)
     self.frame.BackgroundColor3 = variantConfig.bg
     self.frame.BorderSizePixel = 0
     self.frame.Text = ""
@@ -100,6 +126,8 @@ function ButtonLib.new(config)
     self.label.TextSize = sizeConfig.textSize
     self.label.TextScaled = false
     self.label.Font = Enum.Font.GothamBold
+    self.label.TextXAlignment = Enum.TextXAlignment.Center
+    self.label.TextYAlignment = Enum.TextYAlignment.Center
     self.label.Parent = self.frame
     
     -- Hover effect overlay
@@ -127,6 +155,9 @@ function ButtonLib.new(config)
     rippleCorner.CornerRadius = UDim.new(0, 8)
     rippleCorner.Parent = self.rippleFrame
     
+    -- Store original size for animations
+    self.originalSize = self.frame.Size
+    
     -- Connect events
     self:_connectEvents()
     
@@ -140,8 +171,6 @@ end
 
 -- Connect button events
 function ButtonLib:_connectEvents()
-    local variantConfig = VARIANTS[self.variant] or VARIANTS.primary
-    
     -- Hover effects
     self.frame.MouseEnter:Connect(function()
         if self.disabled then return end
@@ -151,7 +180,7 @@ function ButtonLib:_connectEvents()
         }):Play()
         
         TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.frame.Size + UDim2.new(0, 2, 0, 1)
+            Size = self.originalSize + UDim2.new(0, 2, 0, 1)
         }):Play()
     end)
     
@@ -163,7 +192,7 @@ function ButtonLib:_connectEvents()
         }):Play()
         
         TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.frame.Size - UDim2.new(0, 2, 0, 1)
+            Size = self.originalSize
         }):Play()
     end)
     
@@ -172,7 +201,7 @@ function ButtonLib:_connectEvents()
         if self.disabled then return end
         
         TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.frame.Size - UDim2.new(0, 4, 0, 2)
+            Size = self.originalSize - UDim2.new(0, 2, 0, 1)
         }):Play()
         
         self:_createRipple()
@@ -182,7 +211,7 @@ function ButtonLib:_connectEvents()
         if self.disabled then return end
         
         TweenService:Create(self.frame, ANIMATIONS.BOUNCE, {
-            Size = self.frame.Size + UDim2.new(0, 4, 0, 2)
+            Size = self.originalSize
         }):Play()
     end)
     
@@ -195,17 +224,13 @@ end
 
 -- Create ripple effect
 function ButtonLib:_createRipple()
-    local mouse = UserInputService:GetMouseLocation()
-    local framePos = self.frame.AbsolutePosition
     local frameSize = self.frame.AbsoluteSize
     
-    local relativeX = (mouse.X - framePos.X) / frameSize.X
-    local relativeY = (mouse.Y - framePos.Y) / frameSize.Y
-    
+    -- Create ripple at center for simplicity
     local ripple = Instance.new("Frame")
     ripple.Name = "Ripple"
     ripple.Size = UDim2.new(0, 0, 0, 0)
-    ripple.Position = UDim2.new(relativeX, 0, relativeY, 0)
+    ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
     ripple.AnchorPoint = Vector2.new(0.5, 0.5)
     ripple.BackgroundColor3 = Color3.new(1, 1, 1)
     ripple.BackgroundTransparency = 0.8
@@ -217,7 +242,7 @@ function ButtonLib:_createRipple()
     rippleCorner.Parent = ripple
     
     -- Animate ripple
-    local maxSize = math.max(frameSize.X, frameSize.Y) * 2
+    local maxSize = math.max(frameSize.X, frameSize.Y) * 1.5
     
     local expandTween = TweenService:Create(ripple, ANIMATIONS.SMOOTH, {
         Size = UDim2.new(0, maxSize, 0, maxSize),
@@ -234,6 +259,20 @@ end
 function ButtonLib:setText(newText)
     self.text = newText
     self.label.Text = newText
+    
+    -- Recalculate width
+    local sizeConfig = ({
+        sm = {height = 32, padding = 12, textSize = 14},
+        md = {height = 40, padding = 16, textSize = 16},
+        lg = {height = 48, padding = 20, textSize = 18},
+        xl = {height = 56, padding = 24, textSize = 20}
+    })[self.size] or {height = 40, padding = 16, textSize = 16}
+    
+    local textWidth = #newText * (sizeConfig.textSize * 0.6) + (sizeConfig.padding * 2)
+    local buttonWidth = math.max(textWidth, 80)
+    
+    self.originalSize = UDim2.new(0, buttonWidth, 0, sizeConfig.height)
+    self.frame.Size = self.originalSize
 end
 
 -- Update button variant
@@ -282,6 +321,17 @@ end
 -- Set button size
 function ButtonLib:setSize(size)
     self.frame.Size = size
+    self.originalSize = size
+end
+
+-- Quick create function for immediate use
+function ButtonLib.create(text, onClick, variant, position)
+    return ButtonLib.new({
+        text = text or "Button",
+        onClick = onClick or function() end,
+        variant = variant or "primary",
+        position = position or UDim2.new(0, 20, 0, 20)
+    })
 end
 
 -- Utility function to create multiple buttons easily
@@ -290,10 +340,10 @@ function ButtonLib.createGroup(configs, parent)
     
     for i, config in ipairs(configs) do
         config = config or {}
-        config.parent = parent
+        config.parent = parent or getScreenGui()
         
         if not config.position then
-            config.position = UDim2.new(0, 10, 0, 10 + (i - 1) * 60)
+            config.position = UDim2.new(0, 20, 0, 20 + (i - 1) * 60)
         end
         
         table.insert(buttons, ButtonLib.new(config))
@@ -302,4 +352,46 @@ function ButtonLib.createGroup(configs, parent)
     return buttons
 end
 
+-- Demo function to show off the library
+function ButtonLib.demo()
+    print("🎨 Minimal Button Library Demo")
+    
+    local buttons = ButtonLib.createGroup({
+        {
+            text = "Primary",
+            variant = "primary",
+            onClick = function() print("Primary clicked!") end
+        },
+        {
+            text = "Success",
+            variant = "success",
+            onClick = function() print("Success clicked!") end
+        },
+        {
+            text = "Warning",
+            variant = "warning",
+            onClick = function() print("Warning clicked!") end
+        },
+        {
+            text = "Danger",
+            variant = "danger",
+            onClick = function() print("Danger clicked!") end
+        },
+        {
+            text = "Ghost",
+            variant = "ghost",
+            onClick = function() print("Ghost clicked!") end
+        }
+    })
+    
+    -- Create a quick action button
+    local quickBtn = ButtonLib.create("Quick Button", function()
+        print("Quick button works!")
+    end, "secondary", UDim2.new(0, 200, 0, 20))
+    
+    print("Demo buttons created! Try clicking them.")
+    return buttons
+end
+
+-- Return the library
 return ButtonLib
