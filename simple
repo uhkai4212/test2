@@ -1,397 +1,248 @@
---[[
-    Minimal Button UI Library for Roblox
-    Modern, clean, and lightweight button system
-    Designed for 2025 aesthetics
-    
-    Usage:
-    local ButtonLib = loadstring(game:HttpGet"https://raw.githubusercontent.com/uhkai4212/test2/refs/heads/main/simple")()
-]]
+-- Clean UI Library
+-- Minimal, rounded button library for Roblox
 
+local Library = {}
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 
-local ButtonLib = {}
-ButtonLib.__index = ButtonLib
-
--- Modern color palette
-local COLORS = {
-    PRIMARY = Color3.fromRGB(18, 18, 20),
-    SECONDARY = Color3.fromRGB(28, 28, 32),
-    ACCENT = Color3.fromRGB(99, 102, 241),
-    SUCCESS = Color3.fromRGB(16, 185, 129),
-    WARNING = Color3.fromRGB(245, 158, 11),
-    DANGER = Color3.fromRGB(239, 68, 68),
-    TEXT_PRIMARY = Color3.fromRGB(255, 255, 255),
-    TEXT_SECONDARY = Color3.fromRGB(156, 163, 175),
-    SURFACE = Color3.fromRGB(24, 24, 27),
-    BORDER = Color3.fromRGB(39, 39, 42)
-}
-
--- Animation presets
-local ANIMATIONS = {
-    QUICK = TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-    SMOOTH = TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-    BOUNCE = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-}
-
--- Button variants
-local VARIANTS = {
-    primary = {bg = COLORS.ACCENT, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(79, 70, 229)},
-    secondary = {bg = COLORS.SECONDARY, text = COLORS.TEXT_PRIMARY, hover = COLORS.BORDER},
-    ghost = {bg = Color3.new(0, 0, 0), text = COLORS.TEXT_SECONDARY, hover = COLORS.SURFACE},
-    success = {bg = COLORS.SUCCESS, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(5, 150, 105)},
-    warning = {bg = COLORS.WARNING, text = COLORS.PRIMARY, hover = Color3.fromRGB(217, 119, 6)},
-    danger = {bg = COLORS.DANGER, text = COLORS.TEXT_PRIMARY, hover = Color3.fromRGB(220, 38, 38)}
-}
-
--- Auto-create ScreenGui if needed
-local function getScreenGui()
-    local player = Players.LocalPlayer
-    if not player then return nil end
-    
-    local playerGui = player:WaitForChild("PlayerGui")
-    local screenGui = playerGui:FindFirstChild("ButtonLibGui")
-    
-    if not screenGui then
-        screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "ButtonLibGui"
-        screenGui.ResetOnSpawn = false
-        screenGui.Parent = playerGui
-    end
-    
+-- Create ScreenGui
+local function createScreenGui()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "CleanUI"
+    screenGui.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     return screenGui
 end
 
--- Create a new button
-function ButtonLib.new(config)
-    local self = setmetatable({}, ButtonLib)
+-- Create main window
+function Library:CreateWindow(title)
+    local window = {}
+    local screenGui = createScreenGui()
     
-    config = config or {}
+    -- Main frame
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Name = "MainFrame"
+    mainFrame.Parent = screenGui
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.BorderSizePixel = 0
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+    mainFrame.Size = UDim2.new(0, 300, 0, 200)
     
-    -- Button properties
-    self.text = config.text or "Button"
-    self.variant = config.variant or "primary"
-    self.size = config.size or "md"
-    self.disabled = config.disabled or false
-    self.parent = config.parent or getScreenGui()
-    self.onClick = config.onClick or function() end
-    
-    -- Size presets
-    local sizes = {
-        sm = {height = 32, padding = 12, textSize = 14},
-        md = {height = 40, padding = 16, textSize = 16},
-        lg = {height = 48, padding = 20, textSize = 18},
-        xl = {height = 56, padding = 24, textSize = 20}
-    }
-    
-    local sizeConfig = sizes[self.size] or sizes.md
-    local variantConfig = VARIANTS[self.variant] or VARIANTS.primary
-    
-    -- Auto-calculate width based on text
-    local textWidth = #self.text * (sizeConfig.textSize * 0.6) + (sizeConfig.padding * 2)
-    local buttonWidth = math.max(textWidth, 80)
-    
-    -- Create button frame
-    self.frame = Instance.new("TextButton")
-    self.frame.Name = "MinimalButton_" .. self.text
-    self.frame.Size = UDim2.new(0, buttonWidth, 0, sizeConfig.height)
-    self.frame.Position = config.position or UDim2.new(0, 20, 0, 20)
-    self.frame.BackgroundColor3 = variantConfig.bg
-    self.frame.BorderSizePixel = 0
-    self.frame.Text = ""
-    self.frame.AutoButtonColor = false
-    self.frame.ClipsDescendants = true
-    
-    -- Modern rounded corners
+    -- Rounded corners
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 8)
-    corner.Parent = self.frame
+    corner.CornerRadius = UDim.new(0, 12)
+    corner.Parent = mainFrame
     
-    -- Subtle border for depth
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = COLORS.BORDER
-    stroke.Thickness = 1
-    stroke.Transparency = 0.8
-    stroke.Parent = self.frame
+    -- Drop shadow
+    local shadow = Instance.new("ImageLabel")
+    shadow.Name = "Shadow"
+    shadow.Parent = mainFrame
+    shadow.BackgroundTransparency = 1
+    shadow.Position = UDim2.new(0, -15, 0, -15)
+    shadow.Size = UDim2.new(1, 30, 1, 30)
+    shadow.ZIndex = -1
+    shadow.Image = "rbxasset://textures/ui/GuiImagePlaceholder.png"
+    shadow.ImageColor3 = Color3.fromRGB(0, 0, 0)
+    shadow.ImageTransparency = 0.7
+    shadow.ScaleType = Enum.ScaleType.Slice
+    shadow.SliceCenter = Rect.new(10, 10, 118, 118)
     
-    -- Button text
-    self.label = Instance.new("TextLabel")
-    self.label.Name = "Label"
-    self.label.Size = UDim2.new(1, -sizeConfig.padding * 2, 1, 0)
-    self.label.Position = UDim2.new(0, sizeConfig.padding, 0, 0)
-    self.label.BackgroundTransparency = 1
-    self.label.Text = self.text
-    self.label.TextColor3 = variantConfig.text
-    self.label.TextSize = sizeConfig.textSize
-    self.label.TextScaled = false
-    self.label.Font = Enum.Font.GothamBold
-    self.label.TextXAlignment = Enum.TextXAlignment.Center
-    self.label.TextYAlignment = Enum.TextYAlignment.Center
-    self.label.Parent = self.frame
+    -- Title bar
+    local titleBar = Instance.new("Frame")
+    titleBar.Name = "TitleBar"
+    titleBar.Parent = mainFrame
+    titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+    titleBar.BorderSizePixel = 0
+    titleBar.Size = UDim2.new(1, 0, 0, 40)
     
-    -- Hover effect overlay
-    self.hoverOverlay = Instance.new("Frame")
-    self.hoverOverlay.Name = "HoverOverlay"
-    self.hoverOverlay.Size = UDim2.new(1, 0, 1, 0)
-    self.hoverOverlay.BackgroundColor3 = Color3.new(1, 1, 1)
-    self.hoverOverlay.BackgroundTransparency = 1
-    self.hoverOverlay.BorderSizePixel = 0
-    self.hoverOverlay.Parent = self.frame
+    local titleCorner = Instance.new("UICorner")
+    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.Parent = titleBar
     
-    local hoverCorner = Instance.new("UICorner")
-    hoverCorner.CornerRadius = UDim.new(0, 8)
-    hoverCorner.Parent = self.hoverOverlay
+    -- Title text
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Name = "TitleLabel"
+    titleLabel.Parent = titleBar
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Position = UDim2.new(0, 15, 0, 0)
+    titleLabel.Size = UDim2.new(1, -30, 1, 0)
+    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Text = title or "Clean UI"
+    titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    titleLabel.TextScaled = true
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     
-    -- Ripple effect frame
-    self.rippleFrame = Instance.new("Frame")
-    self.rippleFrame.Name = "RippleFrame"
-    self.rippleFrame.Size = UDim2.new(1, 0, 1, 0)
-    self.rippleFrame.BackgroundTransparency = 1
-    self.rippleFrame.BorderSizePixel = 0
-    self.rippleFrame.Parent = self.frame
+    -- Content frame
+    local contentFrame = Instance.new("ScrollingFrame")
+    contentFrame.Name = "ContentFrame"
+    contentFrame.Parent = mainFrame
+    contentFrame.BackgroundTransparency = 1
+    contentFrame.Position = UDim2.new(0, 0, 0, 45)
+    contentFrame.Size = UDim2.new(1, 0, 1, -45)
+    contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    contentFrame.ScrollBarThickness = 4
+    contentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
+    contentFrame.BorderSizePixel = 0
     
-    local rippleCorner = Instance.new("UICorner")
-    rippleCorner.CornerRadius = UDim.new(0, 8)
-    rippleCorner.Parent = self.rippleFrame
+    -- Layout for buttons
+    local layout = Instance.new("UIListLayout")
+    layout.Parent = contentFrame
+    layout.Padding = UDim.new(0, 8)
+    layout.SortOrder = Enum.SortOrder.LayoutOrder
+    layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     
-    -- Store original size for animations
-    self.originalSize = self.frame.Size
+    local padding = Instance.new("UIPadding")
+    padding.Parent = contentFrame
+    padding.PaddingTop = UDim.new(0, 10)
+    padding.PaddingBottom = UDim.new(0, 10)
+    padding.PaddingLeft = UDim.new(0, 15)
+    padding.PaddingRight = UDim.new(0, 15)
     
-    -- Connect events
-    self:_connectEvents()
+    -- Make draggable
+    local dragging = false
+    local dragStart = nil
+    local startPos = nil
     
-    -- Set parent
-    if self.parent then
-        self.frame.Parent = self.parent
-    end
-    
-    return self
-end
-
--- Connect button events
-function ButtonLib:_connectEvents()
-    -- Hover effects
-    self.frame.MouseEnter:Connect(function()
-        if self.disabled then return end
-        
-        TweenService:Create(self.hoverOverlay, ANIMATIONS.QUICK, {
-            BackgroundTransparency = 0.92
-        }):Play()
-        
-        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.originalSize + UDim2.new(0, 2, 0, 1)
-        }):Play()
-    end)
-    
-    self.frame.MouseLeave:Connect(function()
-        if self.disabled then return end
-        
-        TweenService:Create(self.hoverOverlay, ANIMATIONS.QUICK, {
-            BackgroundTransparency = 1
-        }):Play()
-        
-        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.originalSize
-        }):Play()
-    end)
-    
-    -- Click effects
-    self.frame.MouseButton1Down:Connect(function()
-        if self.disabled then return end
-        
-        TweenService:Create(self.frame, ANIMATIONS.QUICK, {
-            Size = self.originalSize - UDim2.new(0, 2, 0, 1)
-        }):Play()
-        
-        self:_createRipple()
-    end)
-    
-    self.frame.MouseButton1Up:Connect(function()
-        if self.disabled then return end
-        
-        TweenService:Create(self.frame, ANIMATIONS.BOUNCE, {
-            Size = self.originalSize
-        }):Play()
-    end)
-    
-    -- Click callback
-    self.frame.MouseButton1Click:Connect(function()
-        if self.disabled then return end
-        self.onClick()
-    end)
-end
-
--- Create ripple effect
-function ButtonLib:_createRipple()
-    local frameSize = self.frame.AbsoluteSize
-    
-    -- Create ripple at center for simplicity
-    local ripple = Instance.new("Frame")
-    ripple.Name = "Ripple"
-    ripple.Size = UDim2.new(0, 0, 0, 0)
-    ripple.Position = UDim2.new(0.5, 0, 0.5, 0)
-    ripple.AnchorPoint = Vector2.new(0.5, 0.5)
-    ripple.BackgroundColor3 = Color3.new(1, 1, 1)
-    ripple.BackgroundTransparency = 0.8
-    ripple.BorderSizePixel = 0
-    ripple.Parent = self.rippleFrame
-    
-    local rippleCorner = Instance.new("UICorner")
-    rippleCorner.CornerRadius = UDim.new(0.5, 0)
-    rippleCorner.Parent = ripple
-    
-    -- Animate ripple
-    local maxSize = math.max(frameSize.X, frameSize.Y) * 1.5
-    
-    local expandTween = TweenService:Create(ripple, ANIMATIONS.SMOOTH, {
-        Size = UDim2.new(0, maxSize, 0, maxSize),
-        BackgroundTransparency = 1
-    })
-    
-    expandTween:Play()
-    expandTween.Completed:Connect(function()
-        ripple:Destroy()
-    end)
-end
-
--- Update button text
-function ButtonLib:setText(newText)
-    self.text = newText
-    self.label.Text = newText
-    
-    -- Recalculate width
-    local sizeConfig = ({
-        sm = {height = 32, padding = 12, textSize = 14},
-        md = {height = 40, padding = 16, textSize = 16},
-        lg = {height = 48, padding = 20, textSize = 18},
-        xl = {height = 56, padding = 24, textSize = 20}
-    })[self.size] or {height = 40, padding = 16, textSize = 16}
-    
-    local textWidth = #newText * (sizeConfig.textSize * 0.6) + (sizeConfig.padding * 2)
-    local buttonWidth = math.max(textWidth, 80)
-    
-    self.originalSize = UDim2.new(0, buttonWidth, 0, sizeConfig.height)
-    self.frame.Size = self.originalSize
-end
-
--- Update button variant
-function ButtonLib:setVariant(newVariant)
-    if not VARIANTS[newVariant] then return end
-    
-    self.variant = newVariant
-    local variantConfig = VARIANTS[newVariant]
-    
-    TweenService:Create(self.frame, ANIMATIONS.SMOOTH, {
-        BackgroundColor3 = variantConfig.bg
-    }):Play()
-    
-    TweenService:Create(self.label, ANIMATIONS.SMOOTH, {
-        TextColor3 = variantConfig.text
-    }):Play()
-end
-
--- Enable/disable button
-function ButtonLib:setDisabled(disabled)
-    self.disabled = disabled
-    
-    local transparency = disabled and 0.5 or 0
-    
-    TweenService:Create(self.frame, ANIMATIONS.SMOOTH, {
-        BackgroundTransparency = transparency
-    }):Play()
-    
-    TweenService:Create(self.label, ANIMATIONS.SMOOTH, {
-        TextTransparency = transparency
-    }):Play()
-end
-
--- Destroy button
-function ButtonLib:destroy()
-    if self.frame then
-        self.frame:Destroy()
-    end
-end
-
--- Set button position
-function ButtonLib:setPosition(position)
-    self.frame.Position = position
-end
-
--- Set button size
-function ButtonLib:setSize(size)
-    self.frame.Size = size
-    self.originalSize = size
-end
-
--- Quick create function for immediate use
-function ButtonLib.create(text, onClick, variant, position)
-    return ButtonLib.new({
-        text = text or "Button",
-        onClick = onClick or function() end,
-        variant = variant or "primary",
-        position = position or UDim2.new(0, 20, 0, 20)
-    })
-end
-
--- Utility function to create multiple buttons easily
-function ButtonLib.createGroup(configs, parent)
-    local buttons = {}
-    
-    for i, config in ipairs(configs) do
-        config = config or {}
-        config.parent = parent or getScreenGui()
-        
-        if not config.position then
-            config.position = UDim2.new(0, 20, 0, 20 + (i - 1) * 60)
+    titleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = mainFrame.Position
         end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+    
+    -- Auto-resize canvas
+    layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        contentFrame.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y + 20)
+    end)
+    
+    window.Frame = mainFrame
+    window.Content = contentFrame
+    
+    -- Create button function
+    function window:CreateButton(config)
+        local buttonConfig = config or {}
+        local buttonText = buttonConfig.Text or "Button"
+        local callback = buttonConfig.Callback or function() end
         
-        table.insert(buttons, ButtonLib.new(config))
+        -- Button frame
+        local button = Instance.new("TextButton")
+        button.Name = "Button"
+        button.Parent = contentFrame
+        button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        button.BorderSizePixel = 0
+        button.Size = UDim2.new(1, 0, 0, 32)
+        button.Font = Enum.Font.Gotham
+        button.Text = buttonText
+        button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        button.TextScaled = true
+        button.AutoButtonColor = false
+        
+        -- Button corner
+        local buttonCorner = Instance.new("UICorner")
+        buttonCorner.CornerRadius = UDim.new(0, 8)
+        buttonCorner.Parent = button
+        
+        -- Button padding
+        local buttonPadding = Instance.new("UIPadding")
+        buttonPadding.Parent = button
+        buttonPadding.PaddingLeft = UDim.new(0, 12)
+        buttonPadding.PaddingRight = UDim.new(0, 12)
+        buttonPadding.PaddingTop = UDim.new(0, 2)
+        buttonPadding.PaddingBottom = UDim.new(0, 2)
+        
+        -- Hover effects
+        local hoverTween = TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+        })
+        
+        local normalTween = TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+        })
+        
+        local clickTween = TweenService:Create(button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+            BackgroundColor3 = Color3.fromRGB(65, 65, 65)
+        })
+        
+        -- Button events
+        button.MouseEnter:Connect(function()
+            hoverTween:Play()
+        end)
+        
+        button.MouseLeave:Connect(function()
+            normalTween:Play()
+        end)
+        
+        button.MouseButton1Down:Connect(function()
+            clickTween:Play()
+        end)
+        
+        button.MouseButton1Up:Connect(function()
+            hoverTween:Play()
+        end)
+        
+        button.MouseButton1Click:Connect(function()
+            callback()
+        end)
+        
+        return button
     end
     
-    return buttons
+    return window
 end
 
--- Demo function to show off the library
-function ButtonLib.demo()
-    print("🎨 Minimal Button Library Demo")
-    
-    local buttons = ButtonLib.createGroup({
-        {
-            text = "Primary",
-            variant = "primary",
-            onClick = function() print("Primary clicked!") end
-        },
-        {
-            text = "Success",
-            variant = "success",
-            onClick = function() print("Success clicked!") end
-        },
-        {
-            text = "Warning",
-            variant = "warning",
-            onClick = function() print("Warning clicked!") end
-        },
-        {
-            text = "Danger",
-            variant = "danger",
-            onClick = function() print("Danger clicked!") end
-        },
-        {
-            text = "Ghost",
-            variant = "ghost",
-            onClick = function() print("Ghost clicked!") end
-        }
-    })
-    
-    -- Create a quick action button
-    local quickBtn = ButtonLib.create("Quick Button", function()
-        print("Quick button works!")
-    end, "secondary", UDim2.new(0, 200, 0, 20))
-    
-    print("Demo buttons created! Try clicking them.")
-    return buttons
-end
+return Library
 
--- Return the library
-return ButtonLib
+--[[
+EXAMPLE USAGE:
+
+local Library = loadstring(game:HttpGet("path_to_this_script"))()
+
+-- Create window
+local Window = Library:CreateWindow("My Clean UI")
+
+-- Create buttons
+Window:CreateButton({
+    Text = "Teleport to Spawn",
+    Callback = function()
+        game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = CFrame.new(0, 5, 0)
+        print("Teleported to spawn!")
+    end
+})
+
+Window:CreateButton({
+    Text = "Speed Boost",
+    Callback = function()
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 32
+        print("Speed boosted!")
+    end
+})
+
+Window:CreateButton({
+    Text = "Reset Speed",
+    Callback = function()
+        game.Players.LocalPlayer.Character.Humanoid.WalkSpeed = 16
+        print("Speed reset!")
+    end
+})
+
+Window:CreateButton({
+    Text = "Print Hello",
+    Callback = function()
+        print("Hello from Clean UI!")
+    end
+})
+--]]
