@@ -25,12 +25,12 @@ function Library:CreateWindow(title)
     mainFrame.Parent = screenGui
     mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
     mainFrame.BorderSizePixel = 0
-    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    mainFrame.Size = UDim2.new(0, 300, 0, 200)
+    mainFrame.Position = UDim2.new(0.5, -120, 0.5, -80)
+    mainFrame.Size = UDim2.new(0, 240, 0, 160)
     
     -- Rounded corners
     local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
+    corner.CornerRadius = UDim.new(0, 8)
     corner.Parent = mainFrame
     
     -- Drop shadow
@@ -53,10 +53,10 @@ function Library:CreateWindow(title)
     titleBar.Parent = mainFrame
     titleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
     titleBar.BorderSizePixel = 0
-    titleBar.Size = UDim2.new(1, 0, 0, 40)
+    titleBar.Size = UDim2.new(1, 0, 0, 28)
     
     local titleCorner = Instance.new("UICorner")
-    titleCorner.CornerRadius = UDim.new(0, 12)
+    titleCorner.CornerRadius = UDim.new(0, 8)
     titleCorner.Parent = titleBar
     
     -- Title text
@@ -64,12 +64,12 @@ function Library:CreateWindow(title)
     titleLabel.Name = "TitleLabel"
     titleLabel.Parent = titleBar
     titleLabel.BackgroundTransparency = 1
-    titleLabel.Position = UDim2.new(0, 15, 0, 0)
-    titleLabel.Size = UDim2.new(1, -30, 1, 0)
-    titleLabel.Font = Enum.Font.GothamBold
+    titleLabel.Position = UDim2.new(0, 8, 0, 0)
+    titleLabel.Size = UDim2.new(1, -16, 1, 0)
+    titleLabel.Font = Enum.Font.Gotham
     titleLabel.Text = title or "Clean UI"
     titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    titleLabel.TextScaled = true
+    titleLabel.TextSize = 12
     titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     
     -- Content frame
@@ -77,8 +77,8 @@ function Library:CreateWindow(title)
     contentFrame.Name = "ContentFrame"
     contentFrame.Parent = mainFrame
     contentFrame.BackgroundTransparency = 1
-    contentFrame.Position = UDim2.new(0, 0, 0, 45)
-    contentFrame.Size = UDim2.new(1, 0, 1, -45)
+    contentFrame.Position = UDim2.new(0, 0, 0, 32)
+    contentFrame.Size = UDim2.new(1, 0, 1, -32)
     contentFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
     contentFrame.ScrollBarThickness = 4
     contentFrame.ScrollBarImageColor3 = Color3.fromRGB(100, 100, 100)
@@ -87,16 +87,16 @@ function Library:CreateWindow(title)
     -- Layout for buttons
     local layout = Instance.new("UIListLayout")
     layout.Parent = contentFrame
-    layout.Padding = UDim.new(0, 8)
+    layout.Padding = UDim.new(0, 4)
     layout.SortOrder = Enum.SortOrder.LayoutOrder
     layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
     
     local padding = Instance.new("UIPadding")
     padding.Parent = contentFrame
-    padding.PaddingTop = UDim.new(0, 10)
-    padding.PaddingBottom = UDim.new(0, 10)
-    padding.PaddingLeft = UDim.new(0, 15)
-    padding.PaddingRight = UDim.new(0, 15)
+    padding.PaddingTop = UDim.new(0, 6)
+    padding.PaddingBottom = UDim.new(0, 6)
+    padding.PaddingLeft = UDim.new(0, 8)
+    padding.PaddingRight = UDim.new(0, 8)
     
     -- Make draggable
     local dragging = false
@@ -144,25 +144,25 @@ function Library:CreateWindow(title)
         button.Parent = contentFrame
         button.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
         button.BorderSizePixel = 0
-        button.Size = UDim2.new(1, 0, 0, 32)
+        button.Size = UDim2.new(1, 0, 0, 24)
         button.Font = Enum.Font.Gotham
         button.Text = buttonText
         button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        button.TextScaled = true
+        button.TextSize = 11
         button.AutoButtonColor = false
         
         -- Button corner
         local buttonCorner = Instance.new("UICorner")
-        buttonCorner.CornerRadius = UDim.new(0, 8)
+        buttonCorner.CornerRadius = UDim.new(0, 6)
         buttonCorner.Parent = button
         
         -- Button padding
         local buttonPadding = Instance.new("UIPadding")
         buttonPadding.Parent = button
-        buttonPadding.PaddingLeft = UDim.new(0, 12)
-        buttonPadding.PaddingRight = UDim.new(0, 12)
-        buttonPadding.PaddingTop = UDim.new(0, 2)
-        buttonPadding.PaddingBottom = UDim.new(0, 2)
+        buttonPadding.PaddingLeft = UDim.new(0, 8)
+        buttonPadding.PaddingRight = UDim.new(0, 8)
+        buttonPadding.PaddingTop = UDim.new(0, 1)
+        buttonPadding.PaddingBottom = UDim.new(0, 1)
         
         -- Hover effects
         local hoverTween = TweenService:Create(button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
